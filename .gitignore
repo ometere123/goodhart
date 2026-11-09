@@ -1,0 +1,14 @@
+node_modules/
+.venv/
+.pytest_cache/
+.coverage
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+*.log
+dist/
+artifacts/
+*.zip
+deployment-private.json
