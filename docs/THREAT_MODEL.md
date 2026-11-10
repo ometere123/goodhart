@@ -62,10 +62,13 @@ still miss meaning inside an accepted source, and heterogeneous models can
 produce disagreement or a conservative `INCONCLUSIVE` result.
 
 The corrected primary was live-tested with an external CERT-EU/Debian source
-pair; it finalized `INCONCLUSIVE` with both outcomes `UNKNOWN`. Earlier
-positive and consumer receipts belong to the previous deployment and are
-retained as historical evidence only. A fresh rewardable proof for the
-corrected deployment remains an explicit release blocker.
+pair; it finalized `INCONCLUSIVE` with both outcomes `UNKNOWN`, which is the
+desired fail-closed result for that evidence surface. A separate controlled
+fixture finalized `REWARDABLE` after one bounded retry, and its exact bound
+RewardGate action succeeded once and rejected replay. That proof establishes
+the corrected deployment’s consensus and consumer mechanics only; it does not
+remove the publisher-identity, measurement-independence or real-world outcome
+assumptions above.
 
 GOODHART is not a substitute for independent measurement, fraud investigation,
 privacy controls, publisher authentication or high-value financial custody.

@@ -93,9 +93,42 @@ independent publisher evidence.
 | `fixture-consensus-positive-20261110` | `0x637a97e7c9a92dc2ab347294849039691fceb6d901db531675d54ed9e1eccc55` | `0x3784eba481d4ab244cce1a7b81b3fb48a75b2f8c9124cfb4faf35dfa9f353dd9` | First assessment submission was not returned by the RPC; the later finalized call rolled back `EXPECTED: stale program or already terminal`; no receipt and no reward clearance |
 | `reward-permission-positive-20261110` | `0x5ca7be79e50a7f4448788cb0f0b41a1ec88a9bb46783b667c2c3cdfeeab52772` | `0x20f94ec1580007b41f2c291982f26fc5ba769dfbdebda7efeb73531334a3eea8` | Finalized rollback `EXPECTED: stale program or already terminal`; programme remained `PENDING`; no reward clearance |
 
-No fresh corrected-primary assessment returned `REWARDABLE`. No new
-RewardGate was deployed against a rewardable programme on this primary, and no
-new-build authorized consumer execution or replay can honestly be recorded.
+The rows above are earlier unsuccessful fixture attempts and remain recorded
+as such. The later beneficiary-bound fixture and its finalized consumer proof
+are documented in the next section.
+
+## Fresh corrected-primary positive and consumer proof
+
+The following is a controlled, repository-hosted fixture. It proves the
+corrected primary’s finalized positive state transition and exact RewardGate
+composition; it is not independent publisher authentication or proof of a
+real beneficiary’s production outcome.
+
+| Field | Verified value |
+|---|---|
+| Programme | `fresh-positive-auth-beneficiary-20261110` |
+| Owner | `0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7` |
+| Distinct beneficiary | `0x271FeAA6764865c2c8309e4C603D10650DbD0F95` |
+| Fingerprint | `8f05a66e99962bdbfaf58820efeb873e78831e1aca7f61080fc72b9c89198494` |
+| Registration | `0xbd19a20312a6db27f752bfac285ccc0cacab08bba339771083a9280a7b4abd2f`; finalized execution `SUCCESS` |
+| Assessment | `0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`; finalized `MAJORITY_AGREE`, execution `SUCCESS` |
+| Read-back | status `REWARDABLE`; proxy `20 -> 80`; outcomes `IMPROVED` / `IMPROVED`; `is_rewardable=true` |
+| Proxy digest | `ea4e7e433d09b85fde3847ee67e88bb8ab8968ce29ebea3ee670d3950f175129` |
+| Outcome A digest | `a0bbbf349468f0ed67f57ccd46444a8a9bb555b76a114fd6a13ec22f2a0b65ba` |
+| Outcome B digest | `ce52190f24d7454d7bc4bf1856edc895f9296fc53d78e76c4325a632b8f8fbb2` |
+| RewardGate | `0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0` |
+| RewardGate deployment | `0x58f6f86c3e2ba43d66351d006edee34463e39a4eec50f609130680b8f04f3200`; finalized `MAJORITY_AGREE`, execution `SUCCESS` |
+| Exact action hash | `31b6c9e6ef42b61aa61a07b5dea943761847a6049d18ad7c1f96fa51e5eb5e70` |
+| Authorized action | `0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423`; finalized `MAJORITY_AGREE`, execution `SUCCESS`; `was_executed=true` |
+| Replay | `0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8`; finalized `MAJORITY_AGREE`, rollback `EXPECTED: replay`; `was_executed` remained `true` |
+
+The first assessment attempt for this same frozen programme finalized
+`MAJORITY_DISAGREE` as `0xf8a974ded8f6224565ae2e144234a48c7a71627ae2f310d0d80512bb7057b020`.
+It left the programme `PENDING` with no receipt. The single bounded retry
+above then succeeded; the disagreement was not reinterpreted as clearance.
+
+The corrected primary remains byte-identical to the deployed source, and the
+new RewardGate source was independently read through `gen_getContractCode`.
 
 ## Historical proof, retained but not promoted
 
@@ -123,18 +156,18 @@ corrected primary source.
 - `contracts/reward_gate.py`: SHA-256
   `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22`.
 - Goodhart deployed bytes match the final committed Goodhart file exactly.
-- RewardGate source is unchanged from its historical deployment, but no new
-  gate is claimed for the corrected primary.
+- RewardGate source is unchanged and the new deployed gate bytes match it.
+  The new gate is bound to the corrected primary and the fresh programme
+  listed above.
 - No explorer URL is claimed; the explorer endpoint returned HTTP 503.
 - No secrets, private keys, frontend, backend, database, Docker or wallet UI
   are part of the repository.
 
-## Release blocker
+## Release status
 
-The corrected primary is deployed and locally verified, but the release is not
-submission-ready for the requested end-to-end proof. The exact blocker is a
-fresh finalized `REWARDABLE` assessment on the corrected primary, followed by
-a RewardGate bound to that fingerprint and successful authorized execution plus
-replay rejection. The live source/model path returned conservative
-`INCONCLUSIVE`/`UNKNOWN` results, and no transaction was reinterpreted or
-reused to manufacture clearance.
+The previously identified corrected-primary release blocker is cleared:
+fresh finalized `REWARDABLE`, exact RewardGate binding, authorized execution
+and finalized replay rejection are all recorded above. The positive case is a
+controlled mechanics fixture. The external XZ candidate remains a finalized
+fail-closed `INCONCLUSIVE` result, so this release does not claim authenticated
+publisher independence, causal real-world improvement or payment.

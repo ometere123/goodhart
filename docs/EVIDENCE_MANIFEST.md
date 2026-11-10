@@ -52,10 +52,19 @@ the GOODHART beneficiary changed any particular fleet.
 
 The repository’s finalized positive cycle uses controlled fixtures because the
 protocol’s exact four-field proxy schema requires a source whose `program_id`
-is bound to the registered programme. The external XZ pair is retained as an
-independently hosted, bounded evidence candidate and adversarial review case;
-it is not presented as proof of a real beneficiary’s remediation or as a
-publisher-authenticated reward clearance.
+is bound to the registered programme. On the corrected primary, programme
+`fresh-positive-auth-beneficiary-20261110` (fingerprint
+`8f05a66e99962bdbfaf58820efeb873e78831e1aca7f61080fc72b9c89198494`)
+finalized `REWARDABLE` in
+`0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`, and
+its exact RewardGate action succeeded in
+`0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423`;
+replay was rejected in
+`0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8`.
+This is mechanics evidence, not proof of a real beneficiary’s remediation or
+a publisher-authenticated reward clearance. The external XZ pair is retained
+as an independently hosted, bounded evidence candidate and adversarial review
+case; it finalized `INCONCLUSIVE` on-chain.
 
 Three hostnames are therefore not promoted to “three independent publishers.”
 Publisher organization, authority, measurement independence and source

@@ -25,12 +25,24 @@ The corrected primary is
 `0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881`, with source hash
 `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b`.
 
-No RewardGate has been deployed against a fresh `REWARDABLE` programme on that
-corrected primary. The exact live external assessment
+The fresh controlled programme
+`fresh-positive-auth-beneficiary-20261110` finalized `REWARDABLE` on that
+primary in assessment
+`0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`.
+The bound gate is
+`0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0`; its exact authorized action
+finalized successfully in
+`0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423` and
+`was_executed` read `true`. Repeating the identical action finalized with
+`EXPECTED: replay` in
+`0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8`, while
+the receipt remained recorded.
+
+The exact live external assessment
 `0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`
-finalized `INCONCLUSIVE`, so an authorized new-build action would correctly be
-blocked. The required fresh positive authorization and replay receipts remain
-unverified rather than being inferred from a different deployment.
+still finalized `INCONCLUSIVE`; it is a fail-closed external control. The
+positive gate uses controlled fixture content and is not a claim of
+authenticated publisher independence or real-world outcome truth.
 
 ## Historical interoperability proof
 

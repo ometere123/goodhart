@@ -61,11 +61,14 @@ properties remain human/governance assumptions and are disclosed in
 ## Current live result
 
 The corrected primary at
-`0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881` was assessed with a real external
-CERT-EU / Debian XZ source pair. The finalized transaction
+`0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881` has both a fail-closed external
+control and a finalized controlled positive mechanics proof. The CERT-EU /
+Debian XZ transaction
 `0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`
 returned `INCONCLUSIVE`, with proxy `20 -> 80` and both outcomes `UNKNOWN`.
-That is a fail-closed result, not a false clearance. Fresh controlled fixture
-attempts on the corrected primary also remained nonrewardable. The earlier
-`REWARDABLE` and RewardGate receipts are retained in the deployment ledger as
-historical evidence for the previous byte-identical source only.
+The controlled programme assessment
+`0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`
+finalized `REWARDABLE` after a single bounded retry. Its exact RewardGate
+action succeeded and the identical replay was rejected; details are in
+`DEPLOYMENT.md`. The positive fixture demonstrates consensus and consumer
+binding mechanics, not publisher authentication or real-world causality.

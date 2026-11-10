@@ -51,11 +51,9 @@ GenVM Keccak substitute.
 The corrected primary deployment is recorded in `DEPLOYMENT.md`. Its fresh
 external XZ assessment finalized `MAJORITY_AGREE` and terminal
 `INCONCLUSIVE`, with proxy `20 -> 80` and both outcomes `UNKNOWN`; this is a
-successful fail-closed control. Fresh controlled fixture assessments were also
-nonrewardable. The prior deployment’s `REWARDABLE` and RewardGate receipts are
-historical only and are not counted as corrected-primary proof.
-
-The remaining live gate is a new finalized `REWARDABLE` assessment on the
-corrected primary followed by a newly bound RewardGate authorized action and
-replay rejection. No test result is promoted to that proof without a finalized
-transaction and read-back.
+successful fail-closed control. A separate controlled fixture finalized
+`REWARDABLE` after one bounded retry, and the newly bound RewardGate authorized
+action succeeded once and rejected an identical replay. These are finalized
+corrected-primary receipts, not simulations or historical-primary
+substitutions. The controlled fixture remains mechanics evidence rather than
+authenticated real-world publisher or outcome proof.

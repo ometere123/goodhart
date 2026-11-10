@@ -40,10 +40,17 @@ be `REWARDABLE`. An LLM never selects a recipient or reward amount.
 - Fresh external assessment: `0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`,
   finalized `MAJORITY_AGREE`, execution `SUCCESS`, terminal `INCONCLUSIVE`,
   both outcomes `UNKNOWN`.
+- Fresh corrected-primary controlled positive: `0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`,
+  finalized `MAJORITY_AGREE`, execution `SUCCESS`, `REWARDABLE`, proxy `20 -> 80`,
+  outcomes `IMPROVED` / `IMPROVED`, and `is_rewardable=true`.
+- Fresh bound RewardGate: `0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0`, deployment
+  `0x58f6f86c3e2ba43d66351d006edee34463e39a4eec50f609130680b8f04f3200`.
+- Authorized exact action: `0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423`;
+  replay rollback: `0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8`.
 
-The earlier positive and RewardGate receipts are explicitly historical for the
-previous primary. No fresh `REWARDABLE` plus authorized consumer/replay proof
-has been established on the corrected primary.
+The fresh positive and consumer receipts are controlled fixture mechanics
+evidence. They do not establish publisher identity, independent measurement,
+causality, payment or a real beneficiary production outcome.
 
 ## Limitations and readiness
 
@@ -55,7 +62,9 @@ legal liability. RewardGate proves a conditional one-shot permission and does
 not custody or transfer GEN. No frontend, backend or application wallet is
 included.
 
-**Submission readiness: blocked.** The exact remaining gate is a fresh
-finalized `REWARDABLE` assessment on the corrected primary, followed by a newly
-bound RewardGate action that succeeds once and rejects replay. The repository
-does not claim that outcome without actual finalized evidence.
+**Submission readiness: corrected-primary mechanics gate complete, with
+evidence limitations disclosed.** The fresh finalized `REWARDABLE` assessment,
+exact bound consumer action, successful authorization and replay rejection are
+now independently recorded. The external XZ case remains fail-closed and the
+repository does not claim authenticated publisher independence or real-world
+causality from the controlled positive fixture.

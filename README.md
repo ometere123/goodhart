@@ -122,15 +122,28 @@ failures as terminal fail-closed evidence failures while retaining one bounded
 retry for transient service failures. It also adds true Keccak-256 host tests;
 Python SHA3-256 is not used as a Keccak substitute.
 
-The earlier proof-bound RewardGate and positive cycle remain historical for the
-previous Goodhart deployment only. They must not be read as proof of the
-corrected primary. A fresh external case on the corrected primary finalized
-`MAJORITY_AGREE` and `INCONCLUSIVE`
+The corrected primary now has a fresh finalized positive mechanics proof. The
+programme `fresh-positive-auth-beneficiary-20261110` was registered by
+`0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7` for the distinct beneficiary
+`0x271FeAA6764865c2c8309e4C603D10650DbD0F95`. Assessment
+`0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`
+finalized `MAJORITY_AGREE` with successful execution, returned `REWARDABLE`,
+and read back `is_rewardable=true` for the exact fingerprint. The bound
+RewardGate is `0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0`, deployed by
+`0x58f6f86c3e2ba43d66351d006edee34463e39a4eec50f609130680b8f04f3200`.
+The beneficiary’s exact action succeeded in
+`0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423`;
+the identical replay finalized with `EXPECTED: replay` in
+`0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8`, and
+`was_executed` remained `true`.
+
+This positive case is a controlled public fixture proving protocol mechanics,
+not proof of publisher identity, independent real-world measurement or a
+beneficiary’s actual fleet outcome. The separate external XZ case on the
+corrected primary finalized `MAJORITY_AGREE` and `INCONCLUSIVE`
 (`0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`),
-with proxy `20 -> 80` and both outcome labels `UNKNOWN`. Fresh controlled
-fixture attempts likewise remained nonrewardable. No RewardGate has been
-bound to a fresh `REWARDABLE` programme on the corrected primary, so the new
-build’s authorized consumer action and replay proof remain outstanding.
+with proxy `20 -> 80` and both outcome labels `UNKNOWN`; it remains the
+fail-closed external-evidence control.
 
 All deployment receipts, source parity, historical evidence and blockers are
 recorded in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Explorer links are not
