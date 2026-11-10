@@ -158,18 +158,29 @@ The final byte-normalized source is deployed on stable StudioNet:
   `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8`.
 - RewardGate: `0x04f0e8C16256161ac674C0dE5305769bE1b895c9`, deployment
   `0x8524c59c01f181a2c2b903acf21739f31825de8a65e12957bd59183e25f75f30`.
+- Final proof-bound RewardGate instance: `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae`,
+  deployment `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c`.
 - Both deployments are `FINALIZED` with `MAJORITY_AGREE` and successful
   contract execution.
 - Read-back source bytes match the final Git blobs exactly. SHA-256 values and
   every live receipt are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
 
-The final controlled positive fixtures were independently fetched but both
-finalized assessments returned `INCONCLUSIVE` with `UNKNOWN` outcome labels.
-GOODHART therefore correctly exposed no reward clearance. A prior
-pre-normalization deployment reached `REWARDABLE`, but that address and receipt
-are historical only and are not used as final-release proof. The final release
-is not submission-ready until a fresh `REWARDABLE` receipt and corresponding
-authorized RewardGate success are obtained on the byte-identical deployment.
+The final controlled positive fixture was independently fetched on the
+byte-identical Goodhart deployment. Registration
+`0xb1a9f01bd91b8a9c741fe8c9c44b5fc89f1c643ec58b142e1fc0c4d50a3ae0a4` and
+assessment
+`0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`
+finalized with `MAJORITY_AGREE` and successful execution. The read-back status
+is `REWARDABLE`, both outcome classifications are `IMPROVED`, and
+`is_rewardable(program_id, fingerprint)` returns `true` for the exact
+fingerprint `e01446f6d9b58e0913f780f0901d094dc4940ac0fc2d14fa35c00d4eec0917dd`.
+The proof-bound RewardGate then executed the exact precommitted action in
+`0x926f8248e746667aaccbc0ea899b3a1c6318f51ecffdec66b71485b444a415f9`, and a
+second identical call finalized with `EXPECTED: replay` in
+`0xce7a86670ddf252cd317273d401058b8c7a32840de0c66a163e4dc991b18aea1`.
+The successful action and replay read-backs both show the expected one-shot
+state. Earlier `INCONCLUSIVE` attempts and the pre-normalization positive
+receipt remain historical evidence only.
 
 Deployment requires a locally configured, funded GenLayer CLI account. This
 repository never includes or asks you to commit a private key. Never represent

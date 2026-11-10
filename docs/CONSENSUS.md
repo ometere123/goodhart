@@ -43,12 +43,21 @@ numeric value, or witness mismatch is rejected. Extra fields, malformed JSON,
 UNKNOWN results carrying quotes, oversized sources, redirects and unavailable
 sources fail closed. The model never selects a reward amount or changes state.
 
-On the final byte-identical StudioNet deployment, the positive controlled
-fixture was independently fetched and its proxy passed (`80` from baseline
-`20`), but the finalized leader/validator result was `INCONCLUSIVE` with both
-outcome labels `UNKNOWN`. That result is treated as a correct fail-closed
-outcome; it is not converted into `REWARDABLE` for availability or reviewer
-appearance.
+On the final byte-identical StudioNet deployment, the fresh controlled fixture
+registered as `fixture-rewardable-final-20261110` was independently fetched and
+its proxy passed (`80` from baseline `20`). Assessment
+`0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`
+finalized `MAJORITY_AGREE` with successful execution, `REWARDABLE`, and both
+outcome labels `IMPROVED`. The deterministic read-back
+`is_rewardable(program_id, fingerprint)` returned `true` only for the exact
+registered fingerprint. The proof-bound RewardGate then accepted the exact
+action once and rejected the identical replay; those receipts are recorded in
+`docs/DEPLOYMENT.md`.
+
+Earlier controlled attempts finalized `INCONCLUSIVE`/`UNKNOWN` and remain
+fail-closed historical controls. The successful positive case uses bounded
+repository fixtures, so it demonstrates consensus and binding mechanics rather
+than publisher identity, causal impact or real-world data truth.
 
 ## Evidence limits
 

@@ -49,11 +49,14 @@ exactly.
 | Goodhart deployment transaction | `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8` |
 | Goodhart deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
 | Goodhart source SHA-256 | `d027cb8009a16197448efbfd2055c54c76c86d0586a51d11058d2f8d281e9a3a` (27,297 bytes) |
-| RewardGate address | `0x04f0e8C16256161ac674C0dE5305769bE1b895c9` |
-| RewardGate deployment transaction | `0x8524c59c01f181a2c2b903acf21739f31825de8a65e12957bd59183e25f75f30` |
-| RewardGate deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
+| Original final-source RewardGate address | `0x04f0e8C16256161ac674C0dE5305769bE1b895c9` |
+| Original final-source RewardGate deployment transaction | `0x8524c59c01f181a2c2b903acf21739f31825de8a65e12957bd59183e25f75f30` |
+| Original RewardGate deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
+| Final proof-bound RewardGate address | `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae` |
+| Final proof-bound RewardGate deployment transaction | `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c` |
+| Final proof-bound RewardGate deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
 | RewardGate source SHA-256 | `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22` (2,436 bytes) |
-| Deployed-source parity | Exact byte equality for both contracts: verified `True` |
+| Deployed-source parity | Exact byte equality for Goodhart and both RewardGate instances: verified `True` through `gen_getContractCode` |
 | Explorer | Not recorded as verified: explorer endpoint returned HTTP 503 during closeout |
 
 The final Goodhart and RewardGate source files were unchanged in content from
@@ -70,7 +73,12 @@ real-world action, causality, payment eligibility or data truth.
 
 | Proof | Finalized transaction/readback |
 |---|---|
-| Positive registration on final Goodhart | `0x6a27ff9d360681dce82279e375b610b2df01b33e93700cdab22020691edc5e47`; fingerprint `fcb053bcd2b9fb19089f40ea099468a961524d81f2f449d57308bb23c37037e3` |
+| Final fresh positive registration on byte-identical Goodhart | `0xb1a9f01bd91b8a9c741fe8c9c44b5fc89f1c643ec58b142e1fc0c4d50a3ae0a4`; program `fixture-rewardable-final-20261110`; fingerprint `e01446f6d9b58e0913f780f0901d094dc4940ac0fc2d14fa35c00d4eec0917dd`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
+| Final fresh positive assessment | `0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS`; read-back `REWARDABLE`, proxy `20 -> 80`, outcome A/B `IMPROVED`, `is_rewardable=true` |
+| Proof-bound RewardGate deployment | `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c`; address `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
+| Authorized exact-action execution | `0x926f8248e746667aaccbc0ea899b3a1c6318f51ecffdec66b71485b444a415f9`; action hash `5d16f2b1ddada8ea1963aa89645b1b12426a830e8793c80914163fbd5cd8713b`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS`; `was_executed=true` |
+| Exact-action replay attempt | `0xce7a86670ddf252cd317273d401058b8c7a32840de0c66a163e4dc991b18aea1`; `FINALIZED`, `MAJORITY_AGREE`, execution rollback `EXPECTED: replay`; `was_executed=true` unchanged |
+| Earlier positive registration attempt | `0x6a27ff9d360681dce82279e375b610b2df01b33e93700cdab22020691edc5e47`; fingerprint `fcb053bcd2b9fb19089f40ea099468a961524d81f2f449d57308bb23c37037e3` |
 | Positive assessment attempt on final Goodhart | `0x9ba2bdfdf8d3e5e5a1651a2f343a4e7ab97573f7cd07b2b5d1c3f81bdf5a21aa`; `FINALIZED`, `MAJORITY_AGREE`, terminal `INCONCLUSIVE`, proxy `80`, both outcomes `UNKNOWN`, `is_rewardable=false` |
 | Second positive fixture registration | `0x26df1667d119b23d6d553e0d9df09e19f6d700ae815f15da6cb26a6e7e3dc29e`; fingerprint `1f640a20d548f6bd843c1279cc22dfdcbde105a9097c566166b1a29f50bab0fd` |
 | Second positive fixture assessment | `0xa3d1c8f0f1e06760e0fec5447b654c5031d7646fd4e64c3cac5947edd6f8ed56`; `FINALIZED`, `MAJORITY_AGREE`, terminal `INCONCLUSIVE`, `is_rewardable=false` |
@@ -78,12 +86,13 @@ real-world action, causality, payment eligibility or data truth.
 | Final RewardGate payload substitution | `0xd703f4f55f6723122bb00771dbf570a95fa6d17d57409ac33acef0a33e5f21e8`; `FINALIZED` rollback `EXPECTED: action substitution` |
 | Final RewardGate unauthorized executor | `0x6fa5ad37af91fc0e573e753f0991b9b0b40e9866ffd803085c717f08404d02b1`; `FINALIZED` rollback `EXPECTED: only beneficiary`; `was_executed=false` |
 
-Additional finalized controls on the earlier byte-equivalent consumer proved
-exact execution, replay rejection and a cancelled-programme rejection, but the
-successful execution is not promoted to final-release proof because the final
-primary deployment did not obtain a `REWARDABLE` receipt. The final positive
-attempts were preserved as `INCONCLUSIVE`; no failed semantic decision was
-reinterpreted as reward clearance.
+The final positive fixture uses controlled public HTTPS documents committed as
+repository fixtures. They demonstrate the protocol and validator source
+bindings, not publisher identity, real-world action completion, causality,
+payment eligibility or data truth. Earlier `INCONCLUSIVE` attempts were
+preserved as fail-closed historical controls; no failed semantic decision was
+reinterpreted as reward clearance. The final proof-bound RewardGate instance
+uses the exact finalized programme fingerprint and action hash above.
 
 ## Live proof standard
 

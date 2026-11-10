@@ -44,8 +44,15 @@ The final byte-identical deployments are recorded in `docs/DEPLOYMENT.md`.
 Finalized live controls include `PROXY_NOT_IMPROVED`, `UNSUPPORTED`, bounded
 `RETRYABLE` then terminal `INCONCLUSIVE`, cancellation, stale fingerprint,
 stale consumer binding, action substitution and unauthorized executor rejection.
-The final positive fixture was independently fetched but both final assessment
-transactions returned `INCONCLUSIVE`/`UNKNOWN`; no `REWARDABLE` or authorized
-RewardGate success is claimed for the final deployment. A prior successful
-receipt belongs to the obsolete CRLF deployment and is historical only.
+The final byte-identical deployment was also exercised with a fresh bounded
+positive fixture. Registration finalized in
+`0xb1a9f01bd91b8a9c741fe8c9c44b5fc89f1c643ec58b142e1fc0c4d50a3ae0a4` and the
+assessment finalized in
+`0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481` as
+`REWARDABLE`, with proxy `20 -> 80`, both outcome labels `IMPROVED`, and
+`is_rewardable=true`. The exact-bound RewardGate authorized execution and
+replay rejection are recorded in `docs/DEPLOYMENT.md`. Controlled fixtures
+demonstrate protocol mechanics and are not claims of publisher identity,
+causality or real-world outcome truth. Earlier `INCONCLUSIVE` attempts remain
+historical fail-closed controls.
 

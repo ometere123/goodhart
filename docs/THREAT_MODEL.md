@@ -62,11 +62,14 @@ and heterogeneous model outputs can prevent consensus. No encryption/privacy
 guarantee exists for public source content. The contract must not process
 private customer records.
 
-The final StudioNet deployment demonstrated the fail-closed side of this
-boundary: controlled positive fixtures produced finalized `INCONCLUSIVE`
-results when semantic consensus returned `UNKNOWN`, and the consumer refused
-stale, substituted and unauthorized calls. No final reward clearance is
-claimed from those receipts.
+The final StudioNet deployment demonstrates both sides of this boundary. A
+fresh controlled fixture finalized `REWARDABLE` only after the proxy passed and
+both independently re-observed outcome sources classified `IMPROVED`; the
+exact-bound consumer then accepted one authorized action and rejected replay.
+Separate historical fixtures finalized `INCONCLUSIVE`/`UNKNOWN`, and stale,
+substituted and unauthorized consumer calls failed closed. The positive fixture
+is a protocol test surface, not proof of publisher identity, causal impact,
+real-world action completion or data truth.
 
 Do not use this release as a substitute for verified independent outcome
 measurement, fraud investigation or high-value financial custody safeguards.
