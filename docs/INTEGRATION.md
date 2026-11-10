@@ -19,3 +19,10 @@ not provide a production cross-contract chain, so RewardGate’s final
 interoperability proof must come from a finalized StudioNet call. Local
 simulation is never reported as live consensus.
 
+The final byte-identical RewardGate deployment is
+`0x04f0e8C16256161ac674C0dE5305769bE1b895c9`. Its finalized stale-binding,
+payload-substitution and unauthorized-executor calls all failed closed. An
+authorized success is intentionally not claimed because the final primary
+deployment's controlled positive assessments finalized `INCONCLUSIVE` rather
+than `REWARDABLE`.
+

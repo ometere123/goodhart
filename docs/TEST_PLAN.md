@@ -38,3 +38,14 @@ audit. The locked GenLayer package currently has development-tool advisories;
 the CI audit intentionally excludes dev-only tooling, while the exact graph
 remains pinned for reproducibility.
 
+## Finalized StudioNet evidence
+
+The final byte-identical deployments are recorded in `docs/DEPLOYMENT.md`.
+Finalized live controls include `PROXY_NOT_IMPROVED`, `UNSUPPORTED`, bounded
+`RETRYABLE` then terminal `INCONCLUSIVE`, cancellation, stale fingerprint,
+stale consumer binding, action substitution and unauthorized executor rejection.
+The final positive fixture was independently fetched but both final assessment
+transactions returned `INCONCLUSIVE`/`UNKNOWN`; no `REWARDABLE` or authorized
+RewardGate success is claimed for the final deployment. A prior successful
+receipt belongs to the obsolete CRLF deployment and is historical only.
+

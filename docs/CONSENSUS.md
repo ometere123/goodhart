@@ -43,6 +43,13 @@ numeric value, or witness mismatch is rejected. Extra fields, malformed JSON,
 UNKNOWN results carrying quotes, oversized sources, redirects and unavailable
 sources fail closed. The model never selects a reward amount or changes state.
 
+On the final byte-identical StudioNet deployment, the positive controlled
+fixture was independently fetched and its proxy passed (`80` from baseline
+`20`), but the finalized leader/validator result was `INCONCLUSIVE` with both
+outcome labels `UNKNOWN`. That result is treated as a correct fail-closed
+outcome; it is not converted into `REWARDABLE` for availability or reviewer
+appearance.
+
 ## Evidence limits
 
 The source digest binds the URL and normalized bytes observed during this

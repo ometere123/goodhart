@@ -62,5 +62,11 @@ and heterogeneous model outputs can prevent consensus. No encryption/privacy
 guarantee exists for public source content. The contract must not process
 private customer records.
 
+The final StudioNet deployment demonstrated the fail-closed side of this
+boundary: controlled positive fixtures produced finalized `INCONCLUSIVE`
+results when semantic consensus returned `UNKNOWN`, and the consumer refused
+stale, substituted and unauthorized calls. No final reward clearance is
+claimed from those receipts.
+
 Do not use this release as a substitute for verified independent outcome
 measurement, fraud investigation or high-value financial custody safeguards.

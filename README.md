@@ -119,8 +119,9 @@ Case D: proxy=80; one outcome source unavailable or ambiguous:
 | Chain ID | **`61999`** (`0xf22f`) |
 | RPC | `https://studio.genlayer.com/api` |
 | CLI | Repository-local **`genlayer@0.39.1`** |
-| Direct Mode SDK | `v0.2.12` |
-| GenVM contract runner pin | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` |
+| Direct Mode tooling | `genlayer-test==0.29.2` |
+| GenVM runner | `v0.2.12` |
+| GenVM contract dependency | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` |
 
 Do not use network `studionet-dev`, chain `61997`, or global
 `genlayer@0.40.0rc2` for this release. CLI invocations go through `npm run`
@@ -149,24 +150,30 @@ Native Direct Mode uses a local simulated VM and does **not** contact the
 `localnet` RPC displayed by the test plugin. Never mistake Direct Mode for a
 finalized on-chain StudioNet execution.
 
-## Live deployment handoff
+## Live deployment and verification status
+
+The final byte-normalized source is deployed on stable StudioNet:
+
+- Goodhart: `0x7F1eE6dA4ED706E363B54713B6dfc0dB2AA64234`, deployment
+  `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8`.
+- RewardGate: `0x04f0e8C16256161ac674C0dE5305769bE1b895c9`, deployment
+  `0x8524c59c01f181a2c2b903acf21739f31825de8a65e12957bd59183e25f75f30`.
+- Both deployments are `FINALIZED` with `MAJORITY_AGREE` and successful
+  contract execution.
+- Read-back source bytes match the final Git blobs exactly. SHA-256 values and
+  every live receipt are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+The final controlled positive fixtures were independently fetched but both
+finalized assessments returned `INCONCLUSIVE` with `UNKNOWN` outcome labels.
+GOODHART therefore correctly exposed no reward clearance. A prior
+pre-normalization deployment reached `REWARDABLE`, but that address and receipt
+are historical only and are not used as final-release proof. The final release
+is not submission-ready until a fresh `REWARDABLE` receipt and corresponding
+authorized RewardGate success are obtained on the byte-identical deployment.
 
 Deployment requires a locally configured, funded GenLayer CLI account. This
-repository never includes or asks you to commit a private key.
-
-```bash
-npm ci --ignore-scripts
-npm run network:check
-./node_modules/.bin/genlayer account list
-npm run deploy:studionet
-```
-
-After deploying, **wait for finalization**, inspect transaction receipt and
-code/schema, exercise both a favourable and a divergent programme against
-real public HTTPS evidence (not just mocks), and document links in
-[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Use the same explicit chain/RPC for
-the separately deployed `RewardGate`. Never represent an `Accepted` transaction
-or a Direct Mode test as a finalized StudioNet proof.
+repository never includes or asks you to commit a private key. Never represent
+an `Accepted` transaction or a Direct Mode test as a finalized StudioNet proof.
 
 ## Verification and scope
 
