@@ -1,10 +1,12 @@
 # v0.2.18
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-"""GOODHART: a consent-bound, public-evidence proxy/objective divergence gate.
+"""GOODHART: an owner-authenticated, public-evidence proxy/objective divergence gate.
 
 This contract does not measure reality exhaustively. It verifies a frozen public
 evidence surface, never pays from an LLM's opinion, and exposes an exact-hash
-reward permission to other Intelligent Contracts. No frontend is required.
+reward permission to other Intelligent Contracts. Registration authenticates the
+owner and freezes a beneficiary binding; it is not a beneficiary-consent or
+publisher-identity protocol. No frontend is required.
 """
 from genlayer import *
 
@@ -334,7 +336,12 @@ class Goodhart(gl.Contract):
                          proxy_url: str, outcome_a_url: str,
                          outcome_b_url: str, delay_seconds: u256,
                          lifetime_seconds: u256) -> str:
-        """Freeze an exact incentive definition and three distinct public surfaces."""
+        """Freeze an exact incentive definition and three distinct HTTPS hosts.
+
+        Distinct hosts reduce accidental source reuse but do not authenticate
+        publishers, establish organizational independence, or prove the source
+        claims. Those remain explicit integration and governance assumptions.
+        """
         program_id = _id(program_id)
         if program_id in self.programs or int(self.count) >= MAX_PROGRAMS:
             _error("program id unavailable")
@@ -379,14 +386,19 @@ class Goodhart(gl.Contract):
             response = gl.nondet.web.get(url)
             status = int(getattr(response, "status", 200))
             if status != 200:
-                return "", "HTTP_ERROR", True
+                # Permanent client errors and redirect/source-identity changes
+                # are semantic evidence failures, not recoverable outages.
+                # Only rate limits, timeouts and server-side failures receive
+                # the single bounded retry allowance.
+                transient = status in (408, 425, 429) or 500 <= status <= 599
+                return "", "HTTP_ERROR", transient
             headers = getattr(response, "headers", {}) or {}
             if (any(str(k).lower() in ("location", "content-location") for k in headers)
                     or getattr(response, "history", None)):
-                return "", "REDIRECT", True
+                return "", "REDIRECT", False
             final_url = getattr(response, "url", None)
             if final_url and str(final_url) != url:
-                return "", "REDIRECT", True
+                return "", "REDIRECT", False
             page = _clean_page(response.body)
         except Exception:
             return "", "SOURCE_ERROR", True

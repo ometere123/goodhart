@@ -4,6 +4,7 @@ import json
 import pathlib
 import types
 import unittest
+from Crypto.Hash import keccak
 
 
 SOURCE = pathlib.Path(__file__).resolve().parents[1] / "contracts" / "goodhart.py"
@@ -17,7 +18,7 @@ SUBSET = ast.Module(body=[n for n in TREE.body if isinstance(n, (ast.FunctionDef
                           and n.name in NAMES], type_ignores=[])
 ctx = {
     "typing": __import__("typing"), "json": json,
-    "Keccak256": lambda b: __import__("hashlib").sha3_256(b),
+    "Keccak256": lambda b: _keccak256(b),
     "IMPROVED": "IMPROVED", "STABLE": "STABLE", "DEGRADED": "DEGRADED",
     "MIXED": "MIXED", "UNKNOWN": "UNKNOWN",
     "OUTCOMES": ("IMPROVED", "STABLE", "DEGRADED", "MIXED", "UNKNOWN"),
@@ -26,6 +27,18 @@ ctx = {
     "PROXY_NOT_IMPROVED": "PROXY_NOT_IMPROVED", "MAX_QUOTE": 200,
     "MAX_PAGE": 12000, "MAX_PAGE_BYTES": 48000, "MAX_REASON": 48,
 }
+
+
+def _keccak256(value):
+    digest = keccak.new(digest_bits=256)
+    digest.update(value)
+    return digest
+
+
+# The execution context above is compiled after this helper is defined at
+# runtime; keep the helper next to the host adapter so the test cannot silently
+# regress to hashlib.sha3_256, which has a different padding rule.
+ctx["Keccak256"] = _keccak256
 exec(compile(SUBSET, str(SOURCE), "exec"), ctx)
 GATE_SUBSET = ast.Module(
     body=[n for n in GATE_TREE.body if isinstance(n, ast.FunctionDef)
@@ -35,6 +48,18 @@ exec(compile(GATE_SUBSET, str(GATE_SOURCE), "exec"), gate_ctx)
 
 
 class PureRules(unittest.TestCase):
+    def test_true_keccak_vectors_and_domain_hash(self):
+        empty = keccak.new(digest_bits=256)
+        empty.update(b"")
+        self.assertEqual(
+            empty.hexdigest(),
+            "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+        )
+        self.assertEqual(
+            ctx["_sha"]("TEST", {"b": 2, "a": 1}),
+            "992be3e347b01775b094c61552b55651cb3b27becc3e292818fabd551e5c85cd",
+        )
+
     def test_alignment_requires_both(self):
         self.assertEqual(ctx["_decision"](True, "IMPROVED", "IMPROVED"), "REWARDABLE")
 

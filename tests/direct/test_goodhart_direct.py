@@ -98,6 +98,18 @@ def test_public_metric_source_failure_is_retryable(direct_vm, direct_deploy, dir
     assert contract.assess("support42", fingerprint) == "REWARDABLE"
 
 
+def test_permanent_http_failure_is_inconclusive_not_retryable(
+        direct_vm, direct_deploy, direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    direct_vm.mock_web(r"metrics\.example\.org/program.json", {
+        "status": 404, "body": "missing"
+    })
+    assert contract.assess("support42", fingerprint) == "INCONCLUSIVE"
+    assert contract.get_program("support42")["attempts"] == "1"
+    assert contract.is_rewardable("support42", fingerprint) is False
+
+
 def test_retry_exhaustion_is_terminal_and_nonrewardable(direct_vm, direct_deploy,
                                                         direct_alice):
     contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
