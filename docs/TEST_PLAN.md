@@ -1,6 +1,6 @@
 # GOODHART verification plan
 
-All commands use the repository-local CLI and Python 3.12 environment:
+## Commands
 
 ```text
 npm ci --ignore-scripts
@@ -9,50 +9,53 @@ node scripts/assert_studionet.mjs
 py -3.12 scripts/preflight.py
 py -3.12 -m unittest discover -s tests -p 'test_*.py' -v
 py -3.12 -m pytest -q tests/direct -s
+py -3.12 -m pytest -q tests
 py -3.12 -m compileall -q contracts scripts tests
+py -3.12 scripts/mutation_check.py
 GENVM_VERSION=v0.2.12 genvm-lint check contracts/goodhart.py
 GENVM_VERSION=v0.2.12 genvm-lint check contracts/reward_gate.py
 GENVM_VERSION=v0.2.12 genvm-lint schema contracts/goodhart.py --json
 GENVM_VERSION=v0.2.12 genvm-lint schema contracts/reward_gate.py --json
 ```
 
-The host suite covers exact proxy parsing and arithmetic, URL restrictions,
-prompt-injection boundaries, exact model schemas, source normalization,
-oversized evidence, distant counterevidence, witness provenance and immutable
-public write surface. The Direct Mode suite covers live contract-class
-execution, the native `run_validator()` callback, positive and divergent
-outcomes, proxy failure, ambiguity, source mutation, forged observations,
-owner-only assessment, terminal state and oversized-source fail-closed
-behavior.
+## Current results
 
-The current verified local counts are 31 host/offline tests and 15 Direct Mode
-tests, 46 when collected together by pytest. The 12 original preflight checks
-were expanded to 18 assertions. Direct Mode uses the local simulated VM and
-mocked sources; it is not a StudioNet transaction or proof of publisher
-independence. Live evidence, finality, cross-contract execution and deployed
-source parity are recorded separately in `docs/DEPLOYMENT.md`.
+- Offline/unit: 32 passed.
+- Direct Mode: 16 passed, including native `run_validator()` re-observation.
+- Combined pytest: 48 passed.
+- Preflight: 18 assertions passed.
+- Mutation checks: 4/4 critical weakened variants killed.
+- GenVM lint and schema: both contracts passed with linter `0.11.0` and
+  runner `v0.2.12`.
+- `eth_chainId`: `0xf22f` / `61999`; local CLI: `0.39.1`.
 
-CI repeats offline tests, compilation, preflight, pinned GenVM lint/schema,
-Direct Mode, the explicit StudioNet RPC guard and a production-dependency npm
-audit. The locked GenLayer package currently has development-tool advisories;
-the CI audit intentionally excludes dev-only tooling, while the exact graph
-remains pinned for reproducibility.
+Direct Mode uses a local simulated VM and mocked sources. It is not a finalized
+StudioNet transaction or proof of publisher independence.
 
-## Finalized StudioNet evidence
+## Security coverage
 
-The final byte-identical deployments are recorded in `docs/DEPLOYMENT.md`.
-Finalized live controls include `PROXY_NOT_IMPROVED`, `UNSUPPORTED`, bounded
-`RETRYABLE` then terminal `INCONCLUSIVE`, cancellation, stale fingerprint,
-stale consumer binding, action substitution and unauthorized executor rejection.
-The final byte-identical deployment was also exercised with a fresh bounded
-positive fixture. Registration finalized in
-`0xb1a9f01bd91b8a9c741fe8c9c44b5fc89f1c643ec58b142e1fc0c4d50a3ae0a4` and the
-assessment finalized in
-`0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481` as
-`REWARDABLE`, with proxy `20 -> 80`, both outcome labels `IMPROVED`, and
-`is_rewardable=true`. The exact-bound RewardGate authorized execution and
-replay rejection are recorded in `docs/DEPLOYMENT.md`. Controlled fixtures
-demonstrate protocol mechanics and are not claims of publisher identity,
-causality or real-world outcome truth. Earlier `INCONCLUSIVE` attempts remain
-historical fail-closed controls.
+The suites cover exact proxy schema and integer arithmetic, URL restrictions,
+control characters, prompt injection, complete-source bounds, distant
+counterevidence, unique witnesses, source mutation, digest mismatch, malformed
+semantic responses, positive-witness veto, malicious leader proposals,
+independent validator callbacks, owner authorization, stale fingerprints,
+bounded retry, terminal states, cancellation and RewardGate replay/binding.
 
+The true Keccak-256 test uses the standard empty-input vector
+`c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470` and a
+domain-separated programme hash. Python `hashlib.sha3_256` is not used as a
+GenVM Keccak substitute.
+
+## Live evidence levels
+
+The corrected primary deployment is recorded in `DEPLOYMENT.md`. Its fresh
+external XZ assessment finalized `MAJORITY_AGREE` and terminal
+`INCONCLUSIVE`, with proxy `20 -> 80` and both outcomes `UNKNOWN`; this is a
+successful fail-closed control. Fresh controlled fixture assessments were also
+nonrewardable. The prior deployment’s `REWARDABLE` and RewardGate receipts are
+historical only and are not counted as corrected-primary proof.
+
+The remaining live gate is a new finalized `REWARDABLE` assessment on the
+corrected primary followed by a newly bound RewardGate authorized action and
+replay rejection. No test result is promoted to that proof without a finalized
+transaction and read-back.

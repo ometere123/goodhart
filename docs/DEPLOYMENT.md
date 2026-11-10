@@ -1,4 +1,8 @@
-# Deployment and proof ledger
+# GOODHART deployment and verification ledger
+
+This ledger separates finalized evidence for the corrected source from the
+earlier deployment. No historical receipt is promoted to proof of a changed
+build.
 
 ## Locked target
 
@@ -8,97 +12,129 @@
 - Repository-local CLI: `genlayer@0.39.1`
 - GenVM runner: `v0.2.12`
 - GenVM linter: `0.11.0`
+- Direct Mode: `genlayer-test==0.29.2`
 
-`node scripts/assert_studionet.mjs` verifies both the RPC result and the
-repository-local CLI immediately before any deployment. No global CLI,
-development network or chain 61997 is an accepted fallback.
+`node scripts/assert_studionet.mjs` queried the locked RPC and confirmed
+`eth_chainId = 0xf22f`; the local CLI printed `0.39.1`. The global CLI was not
+used. No chain 61997 or preview network was used.
 
 ## Baseline and local verification
 
-The starting repository was `03c3e1e84560decde9815cf9a419eb68252589e9`.
-Before hardening, the unchanged host suite passed 23 tests and preflight passed
-12 assertions. The pinned Direct Mode suite initially could not start on this
-Windows host because `genlayer-test==0.29.2` attempted to unlink an open stdin
-temporary file. The repository now contains a Windows-only test shim that
-defers that cleanup until VM teardown; the native contract runner itself is
-unchanged.
+Baseline HEAD before hardening was `3f4285ff8916fb9456363939fb24b22a96060828`
+with a clean worktree. Baseline source hashes were Goodhart
+`d027cb8009a16197448efbfd2055c54c76c86d0586a51d11058d2f8d281e9a3a` and
+RewardGate `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22`.
 
-Current local verification after hardening:
+The corrected local verification was rerun after the code change:
 
-- Offline/host tests: 31 passed.
-- Direct Mode: 15 passed, including native `direct_vm.run_validator()`.
-- Combined pytest collection: 46 passed.
+- Offline/host: 32 passed.
+- Direct Mode: 16 passed, including native validator re-observation.
+- Combined pytest collection: 48 passed.
 - Preflight: 18 assertions passed.
+- Mutation checks: 4 weakened variants killed.
 - Python compileall: passed.
-- `genvm-lint 0.11.0`, `GENVM_VERSION=v0.2.12`: lint and semantic validation
-  passed for both contracts; JSON schema extraction passed for both.
-- RPC guard: confirmed `eth_chainId = 0xf22f`.
+- GenVM lint/schema: both contracts passed with `genvm-lint 0.11.0` and
+  `GENVM_VERSION=v0.2.12`.
+- Production npm audit: no high-severity production vulnerabilities.
+- RPC guard and local CLI check: passed.
 
-These are local or simulated checks, not StudioNet transaction evidence.
+Direct Mode and controlled fixtures are simulated/test evidence, not publisher
+authentication or live-world truth.
 
-## Final deployed-source ledger
+## Corrected primary deployment
 
-The final byte-normalized deployment was made after correcting a Windows
-working-tree line-ending mismatch. Both deployed source blobs were read back
-through `gen_getContractCode`; the returned bytes match the final Git blobs
-exactly.
+The `_fetch` correction changed contract bytes, so a new primary was deployed.
 
-| Evidence | Final verified value |
+| Field | Verified value |
 |---|---|
-| Goodhart address | `0x7F1eE6dA4ED706E363B54713B6dfc0dB2AA64234` |
-| Goodhart deployment transaction | `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8` |
-| Goodhart deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| Goodhart source SHA-256 | `d027cb8009a16197448efbfd2055c54c76c86d0586a51d11058d2f8d281e9a3a` (27,297 bytes) |
-| Original final-source RewardGate address | `0x04f0e8C16256161ac674C0dE5305769bE1b895c9` |
-| Original final-source RewardGate deployment transaction | `0x8524c59c01f181a2c2b903acf21739f31825de8a65e12957bd59183e25f75f30` |
-| Original RewardGate deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| Final proof-bound RewardGate address | `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae` |
-| Final proof-bound RewardGate deployment transaction | `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c` |
-| Final proof-bound RewardGate deployment finality | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| RewardGate source SHA-256 | `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22` (2,436 bytes) |
-| Deployed-source parity | Exact byte equality for Goodhart and both RewardGate instances: verified `True` through `gen_getContractCode` |
-| Explorer | Not recorded as verified: explorer endpoint returned HTTP 503 during closeout |
+| Goodhart address | `0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881` |
+| Deployment transaction | `0xa400c4def28d7e74820252f6f7be13b7b4467712928202336aad3363b87fe638` |
+| Finality/result | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
+| Final local source SHA-256 | `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b` |
+| Read-back deployed SHA-256 | `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b` |
+| Read-back source bytes | 28,052 bytes; exact byte equality |
 
-The final Goodhart and RewardGate source files were unchanged in content from
-the hardened contract commit; only the working-tree encoding was normalized so
-the committed and deployed bytes are identical. The earlier CRLF deployment
-(`0xcC51c9935E77d3a25ecCcCB6Fc19e9B8685f7cc9`) and its receipts are historical
-only and are not used as final-release source evidence.
+The deployed source was read through `gen_getContractCode`, decoded and hashed
+locally. The final Git blob has the same bytes and hash.
 
-## Finalized live lifecycle ledger
+## Fresh corrected-primary live attempts
 
-The live fixtures below are controlled public mechanics fixtures. They are
-retrievable HTTPS documents, not independent proof of publisher identity,
-real-world action, causality, payment eligibility or data truth.
+The owner was `0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7` and the distinct
+beneficiary was `0xaC3508205964f73AcFc1F2cb33Ad529dBed8Cda1`. The CLI used the
+typed address form `addr#` followed by the 40 hexadecimal characters; the
+first attempted `addr#0x...` form was rejected by the contract and was not
+counted as a successful registration.
 
-| Proof | Finalized transaction/readback |
+### External XZ evidence candidate
+
+| Action | Finalized evidence |
 |---|---|
-| Final fresh positive registration on byte-identical Goodhart | `0xb1a9f01bd91b8a9c741fe8c9c44b5fc89f1c643ec58b142e1fc0c4d50a3ae0a4`; program `fixture-rewardable-final-20261110`; fingerprint `e01446f6d9b58e0913f780f0901d094dc4940ac0fc2d14fa35c00d4eec0917dd`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| Final fresh positive assessment | `0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS`; read-back `REWARDABLE`, proxy `20 -> 80`, outcome A/B `IMPROVED`, `is_rewardable=true` |
-| Proof-bound RewardGate deployment | `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c`; address `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| Authorized exact-action execution | `0x926f8248e746667aaccbc0ea899b3a1c6318f51ecffdec66b71485b444a415f9`; action hash `5d16f2b1ddada8ea1963aa89645b1b12426a830e8793c80914163fbd5cd8713b`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS`; `was_executed=true` |
-| Exact-action replay attempt | `0xce7a86670ddf252cd317273d401058b8c7a32840de0c66a163e4dc991b18aea1`; `FINALIZED`, `MAJORITY_AGREE`, execution rollback `EXPECTED: replay`; `was_executed=true` unchanged |
-| Earlier positive registration attempt | `0x6a27ff9d360681dce82279e375b610b2df01b33e93700cdab22020691edc5e47`; fingerprint `fcb053bcd2b9fb19089f40ea099468a961524d81f2f449d57308bb23c37037e3` |
-| Positive assessment attempt on final Goodhart | `0x9ba2bdfdf8d3e5e5a1651a2f343a4e7ab97573f7cd07b2b5d1c3f81bdf5a21aa`; `FINALIZED`, `MAJORITY_AGREE`, terminal `INCONCLUSIVE`, proxy `80`, both outcomes `UNKNOWN`, `is_rewardable=false` |
-| Second positive fixture registration | `0x26df1667d119b23d6d553e0d9df09e19f6d700ae815f15da6cb26a6e7e3dc29e`; fingerprint `1f640a20d548f6bd843c1279cc22dfdcbde105a9097c566166b1a29f50bab0fd` |
-| Second positive fixture assessment | `0xa3d1c8f0f1e06760e0fec5447b654c5031d7646fd4e64c3cac5947edd6f8ed56`; `FINALIZED`, `MAJORITY_AGREE`, terminal `INCONCLUSIVE`, `is_rewardable=false` |
-| Stale/fingerprint-bound RewardGate call | `0xfa0edf7dc933059f560b76920ad7b7a5c57d712fcdb089a04175f66ab6559113`; `FINALIZED` rollback `EXPECTED: underlying objective not certified` |
-| Final RewardGate payload substitution | `0xd703f4f55f6723122bb00771dbf570a95fa6d17d57409ac33acef0a33e5f21e8`; `FINALIZED` rollback `EXPECTED: action substitution` |
-| Final RewardGate unauthorized executor | `0x6fa5ad37af91fc0e573e753f0991b9b0b40e9866ffd803085c717f08404d02b1`; `FINALIZED` rollback `EXPECTED: only beneficiary`; `was_executed=false` |
+| Registration | `0x05a914e1a7a07efe2d7997daab2c88c85c716414a53aa67da0bdba71d2f7f4b5`; execution `SUCCESS` |
+| Programme/fingerprint | `xz-security-remediation-20261110` / `92a217eaf7de6ad96a26a19c64e4ec442f755badd6c6d97b90e49cd19d694709` |
+| Assessment | `0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
+| Read-back | proxy `20 -> 80`; outcome A `UNKNOWN`; outcome B `UNKNOWN`; status `INCONCLUSIVE`; `is_rewardable=false` |
 
-The final positive fixture uses controlled public HTTPS documents committed as
-repository fixtures. They demonstrate the protocol and validator source
-bindings, not publisher identity, real-world action completion, causality,
-payment eligibility or data truth. Earlier `INCONCLUSIVE` attempts were
-preserved as fail-closed historical controls; no failed semantic decision was
-reinterpreted as reward clearance. The final proof-bound RewardGate instance
-uses the exact finalized programme fingerprint and action hash above.
+The external sources were CERT-EU and the Debian Security Tracker. Their URLs,
+raw hashes, normalized lengths and limitations are in
+[`EVIDENCE_MANIFEST.md`](EVIDENCE_MANIFEST.md). This result is the desired
+fail-closed behavior when public material does not establish a comparable
+positive outcome; it is not a reward proof.
 
-## Live proof standard
+### Controlled fixture attempts on the corrected primary
 
-The final ledger must retain the exact transaction hash, final status, signer
-address where appropriate, explorer URL, programme fingerprint, public source
-URLs and post-finality readbacks for registration, assessment and consumer
-calls. A public page is not proof of publisher identity, real-world action,
-causality or payment. Controlled fixtures must be labelled as fixtures. Direct
-Mode output must never be substituted for finalized consensus.
+All of the following used the same distinct beneficiary and repository-hosted
+or repository-derived bounded fixtures. They are mechanics tests, not
+independent publisher evidence.
+
+| Programme | Registration | Assessment | Final read-back |
+|---|---|---|---|
+| `fixture-rewardable-final-20261110` | `0x8543b7b2d5df8808e7817ed5b0796fcd046cf874d87c2057bd9a352f131ab6a0` | `0x9cec76401776524b3bc6a8c8b951e59b7b6bd2768427834f19ac665dc73a3002` | `INCONCLUSIVE`, proxy `20 -> 80`, A/B `UNKNOWN` |
+| `fixture-positive-20261110` | `0xf5fb7494451fbfb2e34fa47f590ccce2e3e74f01cbeb1b262c412facff18a8e4` | `0x23551006dd9c9cc227cfd43f0a5cafb575d16c42b5a46175ade64ced0622b32e` | `INCONCLUSIVE`, proxy `20 -> 80`, A/B `UNKNOWN` |
+| `fixture-consensus-positive-20261110` | `0x637a97e7c9a92dc2ab347294849039691fceb6d901db531675d54ed9e1eccc55` | `0x3784eba481d4ab244cce1a7b81b3fb48a75b2f8c9124cfb4faf35dfa9f353dd9` | First assessment submission was not returned by the RPC; the later finalized call rolled back `EXPECTED: stale program or already terminal`; no receipt and no reward clearance |
+| `reward-permission-positive-20261110` | `0x5ca7be79e50a7f4448788cb0f0b41a1ec88a9bb46783b667c2c3cdfeeab52772` | `0x20f94ec1580007b41f2c291982f26fc5ba769dfbdebda7efeb73531334a3eea8` | Finalized rollback `EXPECTED: stale program or already terminal`; programme remained `PENDING`; no reward clearance |
+
+No fresh corrected-primary assessment returned `REWARDABLE`. No new
+RewardGate was deployed against a rewardable programme on this primary, and no
+new-build authorized consumer execution or replay can honestly be recorded.
+
+## Historical proof, retained but not promoted
+
+The previous byte-identical deployment was Goodhart
+`0x7F1eE6dA4ED706E363B54713B6dfc0dB2AA64234`, source hash
+`d027cb8009a16197448efbfd2055c54c76c86d0586a51d11058d2f8d281e9a3a`.
+Its controlled positive cycle and proof-bound RewardGate remain useful
+historical evidence:
+
+- Goodhart deployment: `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8`.
+- Positive assessment: `0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`,
+  finalized `MAJORITY_AGREE`, execution `SUCCESS`, read-back `REWARDABLE`.
+- Historical proof-bound RewardGate: `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae`,
+  deployment `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c`.
+- Historical authorized action: `0x926f8248e746667aaccbc0ea899b3a1c6318f51ecffdec66b71485b444a415f9`.
+- Historical replay rollback: `0xce7a86670ddf252cd317273d401058b8c7a32840de0c66a163e4dc991b18aea1`.
+
+These receipts prove the previous deployment only. They are not proof of the
+corrected primary source.
+
+## Source integrity and scope
+
+- Corrected `contracts/goodhart.py`: SHA-256
+  `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b`.
+- `contracts/reward_gate.py`: SHA-256
+  `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22`.
+- Goodhart deployed bytes match the final committed Goodhart file exactly.
+- RewardGate source is unchanged from its historical deployment, but no new
+  gate is claimed for the corrected primary.
+- No explorer URL is claimed; the explorer endpoint returned HTTP 503.
+- No secrets, private keys, frontend, backend, database, Docker or wallet UI
+  are part of the repository.
+
+## Release blocker
+
+The corrected primary is deployed and locally verified, but the release is not
+submission-ready for the requested end-to-end proof. The exact blocker is a
+fresh finalized `REWARDABLE` assessment on the corrected primary, followed by
+a RewardGate bound to that fingerprint and successful authorized execution plus
+replay rejection. The live source/model path returned conservative
+`INCONCLUSIVE`/`UNKNOWN` results, and no transaction was reinterpreted or
+reused to manufacture clearance.

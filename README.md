@@ -5,217 +5,146 @@
 GOODHART is a consensus-backed proxy–objective divergence primitive that freezes
 an incentive programme’s real objective and measurable proxy, independently
 evaluates public evidence of underlying outcomes, and exposes an exact-hash
-reward permission only when proxy and objective improvements both withstand
-validator scrutiny.
+reward permission only when proxy and objective improvements withstand validator
+scrutiny.
 
-When an autonomous worker is paid for a proxy (tickets closed, patches merged,
-items inspected), the proxy can improve while the actual goal deteriorates.
-GOODHART creates a version-frozen, consensus-backed **proxy–objective divergence
-gate**. A consumer can execute its precommitted reward action only after two
-public, separately hosted outcome surfaces support improvement in the underlying
-objective. Numerical proxy changes and all transition decisions are deterministic.
+This addresses a common Goodhart failure: a worker can increase a measurable
+proxy—tickets closed, patches merged or inspections completed—while the actual
+objective stays unchanged or deteriorates. GOODHART makes proxy progress
+necessary but insufficient. It does not prove causality, intentional gaming,
+publisher identity, data completeness, payment eligibility or legal liability.
 
-**This is not a general-purpose “AI decides whether to pay” oracle.** The model
-cannot write or change the contract's objective, calculate a reward, choose a
-recipient, or bypass a gate. A safe verdict is narrowly scoped to the
-predeclared public evidence surface; it does not prove genuine causal impact,
-the independence of publishers or that unpublished failures do not exist.
-
-## The mechanism
+## Lifecycle
 
 ```text
-Create one frozen programme
-  owner + beneficiary + objective + observable outcome indicator
-  exact proxy baseline/unit/direction/minimum basis-point improvement
-  public proxy JSON endpoint + 2 outcome endpoints on different HTTPS hosts
-  earliest assessment time + deadline
-               |
-               v
-Assess (owner only, within the fixed window)
-  validators independently fetch and parse proxy JSON (no model arithmetic)
-               |
-               +-- proxy short of threshold --> PROXY_NOT_IMPROVED
-               |
-               +-- proxy improved -----------> classify both outcome sources
-                                                + positive-claim adversarial audit
-                                                + independent validator re-fetch
-                                                + independent substantive re-read
-               |
-               +-- BOTH improved ------------> REWARDABLE
-               +-- either degraded/mixed ----> DIVERGENT
-               +-- no affirmative improvement > UNSUPPORTED
-               +-- ambiguous / missing -----> INCONCLUSIVE (fail closed)
-               |
-               v
-Receipt binds objective, sources, claimed numeric result and programme hash
-               |
-               v
-Another IC: is_rewardable(program_id, fingerprint) → exact one-shot gate
+register one immutable programme
+  owner + typed beneficiary + objective + indicator
+  proxy schema + threshold + three frozen HTTPS URLs + fixed time window
+                         |
+                         v
+assess (owner only, inside the window)
+  deterministic proxy parsing and exact basis-point arithmetic
+  independent leader/validator source retrieval and semantic classification
+                         |
+  proxy short of threshold  -> PROXY_NOT_IMPROVED
+  both outcomes improved     -> REWARDABLE
+  degraded or mixed outcome  -> DIVERGENT
+  stable or unsupported      -> UNSUPPORTED
+  unknown, missing or stale  -> INCONCLUSIVE / bounded RETRYABLE
+                         |
+                         v
+immutable receipt -> is_rewardable(program_id, fingerprint)
+                         |
+                         v
+RewardGate records one exact precommitted action
 ```
 
-## Why GenLayer is necessary
-
-Counting closed tickets is deterministic. Establishing whether actual customer
-issues became less harmful, despite selective reporting, reopened tickets and
-contradictory language, is not. GOODHART puts only the latter operation in
-GenLayer's nondeterministic consensus block. Leader and validators separately
-fetch every public source, classify the **underlying objective** rather than
-the proxy, and scrutinize favourable findings for material qualifications.
-This is a custom `gl.vm.run_nondet_unsafe` comparator, not JSON-format voting.
-The validator independently re-fetches the complete bounded source, recomputes
-the material result, checks the leader witness against the same source digest,
-and performs an additional positive-witness audit. State writes, exact
-basis-point arithmetic and reward gating occur after consensus in deterministic
-code.
+`gl.vm.run_nondet_unsafe` is used only for source observation and semantic
+classification. The contract deterministically parses the exact four-field
+proxy JSON, computes basis-point movement, validates schemas and digests,
+maps statuses and commits the receipt. A model never chooses an amount,
+recipient or state transition.
 
 ## Contracts
 
-- [`contracts/goodhart.py`](contracts/goodhart.py): persistent programme registry,
-  frozen fingerprint, source-backed assessments, bounded retry, immutable
-  terminal receipts, `is_rewardable(program_id, fingerprint)`.
-- [`contracts/reward_gate.py`](contracts/reward_gate.py): minimal typed IC consumer.
-  It verifies the exact registry/programme fingerprint and allows a specified
-  beneficiary to record one precommitted action once. **It intentionally does
-  not custody or transfer GEN**; a wallet/escrow/treasury can instead consume
-  the same exact view method during its own deterministic transfer logic.
+- [`contracts/goodhart.py`](contracts/goodhart.py) freezes the programme,
+  re-fetches the proxy and both outcome URLs, performs independent validator
+  recomputation, rejects incomplete/oversized evidence and exposes
+  `is_rewardable(program_id, fingerprint)`.
+- [`contracts/reward_gate.py`](contracts/reward_gate.py) is a minimal typed
+  consumer. It checks the exact primary address, programme, fingerprint,
+  beneficiary and action hash, then records a successful action once. It does
+  not custody or transfer GEN.
 
-Both contracts are standalone Python Intelligent Contracts, not an app.
+The owner is authenticated at registration and the beneficiary binding is
+immutable. GOODHART intentionally has no beneficiary-consent or publisher-
+identity protocol; those are integration/governance assumptions.
 
-### Primary interface
+## Evidence boundary
 
-| Method | Effect |
-|---|---|
-| `register_program(...)` | Freezes objective, proxy parameters, 3 source URLs, beneficiary and time window; returns fingerprint |
-| `assess(program_id, expected_fingerprint)` | Bounded owner-only consensus observation; terminal verdict or one retry |
-| `cancel(program_id)` | Owner may stop an unassessed programme; irreversible |
-| `is_rewardable(program_id, fingerprint)` | True only on matching, finalized `REWARDABLE` state |
-| `get_program(program_id)` | Exact terms, fingerprint and phase |
-| `get_receipt(program_id)` | Decision, numerical metric, quotes and source digests |
+`_clean_page` accepts a complete normalized source only when it is below the
+12,000-character and 48,000-byte bounds. Oversized, invalid, empty or
+redirected evidence fails closed; it is never silently sliced. Validators
+re-fetch the frozen URL and compare material labels, numeric values, source
+digests and witness occurrence. Positive witnesses also undergo an independent
+compatible-reading audit.
 
-### Example
+Three different HTTPS hostnames are a URL-separation constraint, not proof of
+three independent publishers. The repository includes an external evidence
+manifest for a CERT-EU / Debian XZ Utils case, but the fresh StudioNet
+assessment correctly returned `INCONCLUSIVE` with both outcome labels
+`UNKNOWN`. It is not presented as a reward proof. See
+[`docs/EVIDENCE_MANIFEST.md`](docs/EVIDENCE_MANIFEST.md).
 
-```text
-Registered objective: actually reduce unresolved support incidents and repeats.
-Proxy: tickets marked closed, baseline=20, direction=UP, minimum +30%.
-
-Case A: proxy=80. Two public outcome sources establish fewer repeats.
-  => REWARDABLE; consumer may record its one precommitted reward action.
-
-Case B: proxy=80. Independent customer report says repeats worsened.
-  => DIVERGENT; consumer refuses execution.
-
-Case C: proxy=21 (+5%). Even if outcome pages praise the agent:
-  => PROXY_NOT_IMPROVED. The expensive LLM audit is not needed.
-
-Case D: proxy=80; one outcome source unavailable or ambiguous:
-  => RETRYABLE or INCONCLUSIVE; no reward.
-```
-
-## Locked network — do not substitute
+## Locked environment
 
 | Setting | Required value |
 |---|---|
-| Network | **`studionet`** |
-| Chain ID | **`61999`** (`0xf22f`) |
+| Network | `studionet` |
+| Chain ID | `61999` (`0xf22f`) |
 | RPC | `https://studio.genlayer.com/api` |
-| CLI | Repository-local **`genlayer@0.39.1`** |
-| Direct Mode tooling | `genlayer-test==0.29.2` |
+| Local CLI | `genlayer@0.39.1` |
+| Direct Mode | `genlayer-test==0.29.2` |
 | GenVM runner | `v0.2.12` |
-| GenVM contract dependency | `py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6` |
+| GenVM linter | `0.11.0` |
 
-Do not use network `studionet-dev`, chain `61997`, or global
-`genlayer@0.40.0rc2` for this release. CLI invocations go through `npm run`
-or `./node_modules/.bin/genlayer` only.
-
-## Install and verify
+Never use `studionet-dev`, chain `61997` or global CLI `0.40.0rc2`.
 
 ```bash
 npm ci --ignore-scripts
 python3 -m pip install -r requirements-dev.txt
-npm run cli:version           # must print 0.39.1
-npm run network:check        # must print studionet / 61999
+npm run cli:version
+npm run network:check
 npm run preflight
 npm run test:offline
-python3 -m pytest -q tests/direct
+python3 -m pytest -q tests/direct -s
+npm run test:mutation
 GENVM_VERSION=v0.2.12 genvm-lint check contracts/goodhart.py
 GENVM_VERSION=v0.2.12 genvm-lint check contracts/reward_gate.py
 ```
 
-On PowerShell, set the runner pin first with `$env:GENVM_VERSION='v0.2.12'`.
-The current verified local counts are 31 offline tests, 15 native Direct Mode
-tests and 18 preflight assertions. Direct Mode is a local simulation with
-mocked sources, not a live StudioNet proof.
+The verified local suite currently has 32 offline tests, 16 Direct Mode tests,
+48 combined pytest tests, 18 preflight assertions and 4 mutation checks.
+Direct Mode is a simulated VM with mocked sources; it is not live StudioNet
+evidence.
 
-Native Direct Mode uses a local simulated VM and does **not** contact the
-`localnet` RPC displayed by the test plugin. Never mistake Direct Mode for a
-finalized on-chain StudioNet execution.
+## Deployment status
 
-## Live deployment and verification status
+The corrected primary source is deployed byte-for-byte on StudioNet:
 
-The final byte-normalized source is deployed on stable StudioNet:
+- Goodhart: `0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881`
+- Deployment transaction: `0xa400c4def28d7e74820252f6f7be13b7b4467712928202336aad3363b87fe638`
+- Source SHA-256: `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b`
+- Deployment: finalized `MAJORITY_AGREE`, execution `SUCCESS`
 
-- Goodhart: `0x7F1eE6dA4ED706E363B54713B6dfc0dB2AA64234`, deployment
-  `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8`.
-- RewardGate: `0x04f0e8C16256161ac674C0dE5305769bE1b895c9`, deployment
-  `0x8524c59c01f181a2c2b903acf21739f31825de8a65e12957bd59183e25f75f30`.
-- Final proof-bound RewardGate instance: `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae`,
-  deployment `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c`.
-- Both deployments are `FINALIZED` with `MAJORITY_AGREE` and successful
-  contract execution.
-- Read-back source bytes match the final Git blobs exactly. SHA-256 values and
-  every live receipt are in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+The code correction classifies permanent HTTP/redirect/source-identity
+failures as terminal fail-closed evidence failures while retaining one bounded
+retry for transient service failures. It also adds true Keccak-256 host tests;
+Python SHA3-256 is not used as a Keccak substitute.
 
-The final controlled positive fixture was independently fetched on the
-byte-identical Goodhart deployment. Registration
-`0xb1a9f01bd91b8a9c741fe8c9c44b5fc89f1c643ec58b142e1fc0c4d50a3ae0a4` and
-assessment
-`0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`
-finalized with `MAJORITY_AGREE` and successful execution. The read-back status
-is `REWARDABLE`, both outcome classifications are `IMPROVED`, and
-`is_rewardable(program_id, fingerprint)` returns `true` for the exact
-fingerprint `e01446f6d9b58e0913f780f0901d094dc4940ac0fc2d14fa35c00d4eec0917dd`.
-The proof-bound RewardGate then executed the exact precommitted action in
-`0x926f8248e746667aaccbc0ea899b3a1c6318f51ecffdec66b71485b444a415f9`, and a
-second identical call finalized with `EXPECTED: replay` in
-`0xce7a86670ddf252cd317273d401058b8c7a32840de0c66a163e4dc991b18aea1`.
-The successful action and replay read-backs both show the expected one-shot
-state. Earlier `INCONCLUSIVE` attempts and the pre-normalization positive
-receipt remain historical evidence only.
+The earlier proof-bound RewardGate and positive cycle remain historical for the
+previous Goodhart deployment only. They must not be read as proof of the
+corrected primary. A fresh external case on the corrected primary finalized
+`MAJORITY_AGREE` and `INCONCLUSIVE`
+(`0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`),
+with proxy `20 -> 80` and both outcome labels `UNKNOWN`. Fresh controlled
+fixture attempts likewise remained nonrewardable. No RewardGate has been
+bound to a fresh `REWARDABLE` programme on the corrected primary, so the new
+build’s authorized consumer action and replay proof remain outstanding.
 
-Deployment requires a locally configured, funded GenLayer CLI account. This
-repository never includes or asks you to commit a private key. Never represent
-an `Accepted` transaction or a Direct Mode test as a finalized StudioNet proof.
+All deployment receipts, source parity, historical evidence and blockers are
+recorded in [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Explorer links are not
+claimed because the explorer endpoint returned HTTP 503 during closeout.
 
-## Verification and scope
+## Scope and limitations
 
-- Host-side tests: exact integer arithmetic, disagreement handling, parser
-  hardening, complete-source evidence bounds, witness integrity, URL filtering,
-  prompt boundaries and state immutability checks.
-- GenVM Direct Mode tests: live contract-class execution, independently
-  re-run validator, forged result/source mutation, positive-witness veto,
-  distant counterevidence, owner-only assessment, bounded retry and
-  terminal-state behaviour.
-- Static GenVM lint: both contracts must pass with the pinned runner.
-- [`Consensus notes`](docs/CONSENSUS.md), [`integration notes`](docs/INTEGRATION.md)
-  and the [`test plan`](docs/TEST_PLAN.md) identify the exact boundaries and
-  local-versus-live evidence levels.
-- [Threat model](docs/THREAT_MODEL.md) describes critical trust boundaries.
-- [Deployment status](docs/DEPLOYMENT.md) separates proof from work remaining.
-- [Submission brief](docs/SUBMISSION.md) gives a reviewer-focused summary.
+GOODHART is a reusable protocol primitive, not a payment application. Public
+source material does not independently prove real-world identity, publisher
+ownership, action completion, subjective reliance, causality, hidden data or
+legal liability. A digest attests only to the URL and normalized bytes observed
+by the contract. A separate trusted publisher/attestor policy was not added:
+the stable runtime has no enforceable authority registry that would make such a
+claim truthful without changing the public protocol.
 
-## Limitations, deliberately visible
-
-1. Three different hostnames do **not** prove independent ownership, truthful
-   reporting, or immunity to collusion. Real integrations should use established
-   external publishers and verify their authority separately.
-2. A public snapshot can be stale, selectively curated or subsequently edited;
-   the receipt proves only what the consensus-examined surface supported during
-   assessment. No unstated time-series completeness guarantee exists.
-3. No arbitrary subjective or probabilistic confidence score authorizes value.
-   Mixed, contradictory, ambiguous or unavailable material fails closed.
-4. GOODHART assesses alignment, not causation or intentional manipulation. It
-   cannot prove that the evaluated agent caused the outcome, or infer fraud.
-5. The `RewardGate` shows composability but makes no financial transfer. Native
-   GEN custody is intentionally outside this primitive's trust boundary.
-
-MIT licensed. Source and tests are intended to be read, adapted and extended.
+No frontend, backend, database, Docker deployment, custody, token transfer or
+application wallet is included.

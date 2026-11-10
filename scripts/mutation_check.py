@@ -6,10 +6,11 @@ this does not modify the working tree or invoke a live network.
 """
 
 import ast
-import hashlib
 import json
 import pathlib
 import typing
+
+from Crypto.Hash import keccak
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -30,7 +31,7 @@ def load_context(source: str) -> dict:
     context = {
         "typing": typing,
         "json": json,
-        "Keccak256": lambda value: hashlib.sha3_256(value),
+        "Keccak256": lambda value: keccak.new(digest_bits=256, data=value),
         "IMPROVED": "IMPROVED",
         "STABLE": "STABLE",
         "DEGRADED": "DEGRADED",

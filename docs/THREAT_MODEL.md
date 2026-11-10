@@ -1,75 +1,71 @@
 # GOODHART threat model
 
-## Adversaries
+## Assets and roles
 
-- **Metric manipulator** increases the reported number of completed work units
-  without improving the underlying objective. Mitigation: proxy improvement is
-  necessary but never sufficient.
-- **Malicious consensus leader** inserts a fabricated favourable outcome,
-  changes a quote, changes proxy numbers or substitutes a source snapshot.
-  Mitigation: validators independently re-fetch the exact frozen URLs, parse
-  numeric fields, repeat semantic outcome classification, compare source hashes,
-  challenge positive findings and check the proposed quote in source material.
-- **Hostile public web page** contains instructions to the model. Mitigation:
-  separate untrusted tagged data and context-escape all embedded text; do not
-  follow page instructions; independently re-evaluate.
-- **Evidence truncation or normalization attack** places a favourable witness
-  before a later contradiction, or uses control/encoding edge cases to make
-  leader and validator see different material. Mitigation: `_clean_page`
-  rejects oversized, invalid UTF-8 and disallowed-control input rather than
-  slicing it; both sides normalize under the same bound, hash the complete
-  normalized snapshot, and the validator rechecks the leader witness and
-  digest.
-- **Malformed semantic response** adds fields, attaches a quote to `UNKNOWN`,
-  or claims a positive result with an unsupported witness. Mitigation:
-  `_classify`, `_audit_value` and `_valid_observation` enforce exact schemas;
-  invalid results become nonrewardable and validator checks are fail closed.
-- **Owner/beneficiary** attempts to change criterion, source, baseline, deadline,
-  or beneficiary after observing results. Mitigation: immutable programme hash,
-  no update method, exact-hash consumer and terminal once-only assessment.
-- **Third party** tries to burn recovery attempts during source outages.
-  Mitigation: owner-only assessment and bounded two attempts.
-- **Replay caller** attempts to consume the same conditional permission twice.
-  Mitigation: consumer binds programme fingerprint, exact action hash,
-  beneficiary and one-shot execution record.
+- The owner controls registration and assessment but cannot rewrite a frozen
+  programme or create a reward after a terminal decision.
+- The beneficiary is an immutable typed address and is not automatically a
+  consenting human or independent economic party.
+- The metric reporter supplies the frozen proxy endpoint.
+- Outcome publishers supply public narrative evidence. URL host separation is
+  not authenticated publisher identity or measurement independence.
+- RewardGate protects one exact downstream action and does not transfer GEN.
+
+## Adversaries and mitigations
+
+- **Metric manipulator:** increases the proxy without improving the objective.
+  Proxy movement is necessary but never sufficient; both outcome sources must
+  survive independent semantic review.
+- **Malicious leader:** fabricates a quote, source digest, number, scope or
+  classification. Validators independently fetch all frozen sources, parse the
+  proxy, recompute material labels, compare digests and audit positive witnesses.
+- **Hostile evidence:** embeds prompt injection, a repeated quote, a changed
+  denominator, a different population or distant counterevidence. Evidence is
+  hostile data; `_clean_page` accepts a complete bounded body and never slices
+  away later text. Exact quotes must occur once, and positive claims receive a
+  compatible-reading audit.
+- **Redirect/source substitution:** redirects, final-URL changes, permanent
+  HTTP failures and source-identity changes fail closed. The GenVM response does
+  not expose enough trusted DNS/publisher metadata to prove ownership.
+- **Malformed model output:** exact response schemas, enum checks, quote bounds,
+  digest widths and cross-field status rules reject malformed or incomplete
+  results.
+- **Owner/beneficiary rewrite:** programme terms, URLs, fingerprint and
+  beneficiary are immutable; owner-only assessment/cancellation and terminal
+  receipts prevent post-result changes.
+- **Retry griefing:** only the owner can assess; transient errors have one
+  bounded retry and unresolved recovery becomes terminal `INCONCLUSIVE`.
+- **Replay/misbinding:** RewardGate checks the primary address, programme,
+  fingerprint, beneficiary and exact action, and records a one-shot execution.
 
 ## Protocol invariants
 
-1. `is_rewardable` implies exact registered fingerprint, existing immutable
-   terminal receipt, proxy improvement meeting the threshold, and two
-   affirmative underlying-objective assessments.
-2. A quote is at least twelve characters and occurs exactly once in a complete,
-   bounded, normalized source. Oversized or malformed evidence is rejected,
-   never truncated. The source digest is tied to its URL.
-3. No deterministic economic or programme state is modified in a nondet block.
-4. An observation without affirmative, sufficiently grounded evidence cannot
-   set `REWARDABLE`.
-5. Unavailable/malformed proxy sources and ambiguous objective evidence fail
-   closed; transient failures get at most one additional owner-only attempt.
-6. The accepted programme definition cannot be silently rewritten, refreshed
-   after the fact, or reopened after a terminal status.
+1. `is_rewardable` implies a matching registered fingerprint, a terminal
+   receipt, proxy improvement and two affirmative underlying-objective labels.
+2. Oversized, malformed, empty, redirected or unavailable evidence cannot grant
+   reward permission.
+3. Numeric thresholds and all status transitions are deterministic and outside
+   nondeterministic callbacks.
+4. Unknown, mixed, stable, unsupported, pending, reverted and stale outcomes
+   fail closed.
+5. The accepted programme cannot be reopened or silently refreshed.
 
-## Residual risks
+## Residual risks and assumptions
 
-The owner chooses publisher URLs and the publisher controls what it publishes.
-Different domains may share one underlying operator. Website redirects/DNS
-resolution may not be independently authenticated by the GenVM web response.
-Web observations do not establish ground truth, hidden populations, data
-completeness, causal attribution, service identity, or motivation to game a
-metric. The bounded complete-source rule rejects material pages that exceed
-the cap, but a model can still miss a contradiction within an accepted source,
-and heterogeneous model outputs can prevent consensus. No encryption/privacy
-guarantee exists for public source content. The contract must not process
-private customer records.
+The owner chooses URLs and can choose controlled or colluding publishers.
+Different domains may share an operator. A content digest attests only to the
+observed URL/normalized bytes; it does not prove publisher ownership, truth,
+causality, hidden populations, data completeness, worker identity or real-world
+action completion. The stable runtime does not supply a trusted publisher
+authority registry, so GOODHART deliberately does not claim one. A model can
+still miss meaning inside an accepted source, and heterogeneous models can
+produce disagreement or a conservative `INCONCLUSIVE` result.
 
-The final StudioNet deployment demonstrates both sides of this boundary. A
-fresh controlled fixture finalized `REWARDABLE` only after the proxy passed and
-both independently re-observed outcome sources classified `IMPROVED`; the
-exact-bound consumer then accepted one authorized action and rejected replay.
-Separate historical fixtures finalized `INCONCLUSIVE`/`UNKNOWN`, and stale,
-substituted and unauthorized consumer calls failed closed. The positive fixture
-is a protocol test surface, not proof of publisher identity, causal impact,
-real-world action completion or data truth.
+The corrected primary was live-tested with an external CERT-EU/Debian source
+pair; it finalized `INCONCLUSIVE` with both outcomes `UNKNOWN`. Earlier
+positive and consumer receipts belong to the previous deployment and are
+retained as historical evidence only. A fresh rewardable proof for the
+corrected deployment remains an explicit release blocker.
 
-Do not use this release as a substitute for verified independent outcome
-measurement, fraud investigation or high-value financial custody safeguards.
+GOODHART is not a substitute for independent measurement, fraud investigation,
+privacy controls, publisher authentication or high-value financial custody.
