@@ -2,6 +2,12 @@
 
 **Standalone GenLayer Intelligent Contract primitive. No frontend or product backend.**
 
+GOODHART is a consensus-backed proxy–objective divergence primitive that freezes
+an incentive programme’s real objective and measurable proxy, independently
+evaluates public evidence of underlying outcomes, and exposes an exact-hash
+reward permission only when proxy and objective improvements both withstand
+validator scrutiny.
+
 When an autonomous worker is paid for a proxy (tickets closed, patches merged,
 items inspected), the proxy can improve while the actual goal deteriorates.
 GOODHART creates a version-frozen, consensus-backed **proxy–objective divergence
@@ -56,8 +62,11 @@ GenLayer's nondeterministic consensus block. Leader and validators separately
 fetch every public source, classify the **underlying objective** rather than
 the proxy, and scrutinize favourable findings for material qualifications.
 This is a custom `gl.vm.run_nondet_unsafe` comparator, not JSON-format voting.
-State writes, exact basis-point arithmetic and reward gating occur after
-consensus in deterministic code.
+The validator independently re-fetches the complete bounded source, recomputes
+the material result, checks the leader witness against the same source digest,
+and performs an additional positive-witness audit. State writes, exact
+basis-point arithmetic and reward gating occur after consensus in deterministic
+code.
 
 ## Contracts
 
@@ -131,6 +140,11 @@ GENVM_VERSION=v0.2.12 genvm-lint check contracts/goodhart.py
 GENVM_VERSION=v0.2.12 genvm-lint check contracts/reward_gate.py
 ```
 
+On PowerShell, set the runner pin first with `$env:GENVM_VERSION='v0.2.12'`.
+The current verified local counts are 31 offline tests, 15 native Direct Mode
+tests and 18 preflight assertions. Direct Mode is a local simulation with
+mocked sources, not a live StudioNet proof.
+
 Native Direct Mode uses a local simulated VM and does **not** contact the
 `localnet` RPC displayed by the test plugin. Never mistake Direct Mode for a
 finalized on-chain StudioNet execution.
@@ -157,12 +171,16 @@ or a Direct Mode test as a finalized StudioNet proof.
 ## Verification and scope
 
 - Host-side tests: exact integer arithmetic, disagreement handling, parser
-  hardening, witness integrity, URL filtering, prompt boundaries and state
-  immutability checks.
+  hardening, complete-source evidence bounds, witness integrity, URL filtering,
+  prompt boundaries and state immutability checks.
 - GenVM Direct Mode tests: live contract-class execution, independently
-  re-run validator, forged result/source mutation, owner-only assessment,
-  bounded retry and terminal-state behaviour.
+  re-run validator, forged result/source mutation, positive-witness veto,
+  distant counterevidence, owner-only assessment, bounded retry and
+  terminal-state behaviour.
 - Static GenVM lint: both contracts must pass with the pinned runner.
+- [`Consensus notes`](docs/CONSENSUS.md), [`integration notes`](docs/INTEGRATION.md)
+  and the [`test plan`](docs/TEST_PLAN.md) identify the exact boundaries and
+  local-versus-live evidence levels.
 - [Threat model](docs/THREAT_MODEL.md) describes critical trust boundaries.
 - [Deployment status](docs/DEPLOYMENT.md) separates proof from work remaining.
 - [Submission brief](docs/SUBMISSION.md) gives a reviewer-focused summary.

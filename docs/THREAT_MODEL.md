@@ -13,6 +13,17 @@
 - **Hostile public web page** contains instructions to the model. Mitigation:
   separate untrusted tagged data and context-escape all embedded text; do not
   follow page instructions; independently re-evaluate.
+- **Evidence truncation or normalization attack** places a favourable witness
+  before a later contradiction, or uses control/encoding edge cases to make
+  leader and validator see different material. Mitigation: `_clean_page`
+  rejects oversized, invalid UTF-8 and disallowed-control input rather than
+  slicing it; both sides normalize under the same bound, hash the complete
+  normalized snapshot, and the validator rechecks the leader witness and
+  digest.
+- **Malformed semantic response** adds fields, attaches a quote to `UNKNOWN`,
+  or claims a positive result with an unsupported witness. Mitigation:
+  `_classify`, `_audit_value` and `_valid_observation` enforce exact schemas;
+  invalid results become nonrewardable and validator checks are fail closed.
 - **Owner/beneficiary** attempts to change criterion, source, baseline, deadline,
   or beneficiary after observing results. Mitigation: immutable programme hash,
   no update method, exact-hash consumer and terminal once-only assessment.
@@ -27,8 +38,9 @@
 1. `is_rewardable` implies exact registered fingerprint, existing immutable
    terminal receipt, proxy improvement meeting the threshold, and two
    affirmative underlying-objective assessments.
-2. A quote is at least twelve characters and occurs exactly once in a full,
-   bounded, normalized source. The source digest is tied to its URL.
+2. A quote is at least twelve characters and occurs exactly once in a complete,
+   bounded, normalized source. Oversized or malformed evidence is rejected,
+   never truncated. The source digest is tied to its URL.
 3. No deterministic economic or programme state is modified in a nondet block.
 4. An observation without affirmative, sufficiently grounded evidence cannot
    set `REWARDABLE`.
@@ -44,9 +56,11 @@ Different domains may share one underlying operator. Website redirects/DNS
 resolution may not be independently authenticated by the GenVM web response.
 Web observations do not establish ground truth, hidden populations, data
 completeness, causal attribution, service identity, or motivation to game a
-metric. A model can miss a distant contradiction, and heterogeneous model
-outputs can prevent consensus. No encryption/privacy guarantee exists for
-public source content. The contract must not process private customer records.
+metric. The bounded complete-source rule rejects material pages that exceed
+the cap, but a model can still miss a contradiction within an accepted source,
+and heterogeneous model outputs can prevent consensus. No encryption/privacy
+guarantee exists for public source content. The contract must not process
+private customer records.
 
 Do not use this release as a substitute for verified independent outcome
 measurement, fraud investigation or high-value financial custody safeguards.

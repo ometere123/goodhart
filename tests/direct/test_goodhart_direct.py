@@ -32,7 +32,8 @@ def deploy(vm, deployer, beneficiary):
     return goodhart, fingerprint
 
 
-def mock(vm, a_verdict="IMPROVED", b_verdict="IMPROVED", current=80):
+def mock(vm, a_verdict="IMPROVED", b_verdict="IMPROVED", current=80,
+         audit="SAFE"):
     vm.clear_mocks()
     vm.mock_web(r"metrics\.example\.org/program.json",
                 {"status": 200, "body": json.dumps({"program_id": "support42",
@@ -45,7 +46,7 @@ def mock(vm, a_verdict="IMPROVED", b_verdict="IMPROVED", current=80):
     vm.mock_llm(r"<source_name>corroboration</source_name>", json.dumps({
         "verdict": b_verdict, "quote": B_QUOTE if b_verdict != "UNKNOWN" else "",
         "reason": "CURRENT_EVIDENCE"}))
-    vm.mock_llm(r"GOODHART adversarial", json.dumps({"audit": "SAFE"}))
+    vm.mock_llm(r"GOODHART adversarial", json.dumps({"audit": audit}))
 
 
 def test_aligns_only_two_improvements(direct_vm, direct_deploy, direct_alice):
@@ -97,6 +98,25 @@ def test_public_metric_source_failure_is_retryable(direct_vm, direct_deploy, dir
     assert contract.assess("support42", fingerprint) == "REWARDABLE"
 
 
+def test_retry_exhaustion_is_terminal_and_nonrewardable(direct_vm, direct_deploy,
+                                                        direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    direct_vm.mock_web(r"metrics\.example\.org/program.json", {
+        "status": 503, "body": "",
+    })
+    assert contract.assess("support42", fingerprint) == "RETRYABLE"
+    assert contract.get_program("support42")["attempts"] == "1"
+    direct_vm.clear_mocks()
+    direct_vm.mock_web(r"metrics\.example\.org/program.json", {
+        "status": 503, "body": "",
+    })
+    assert contract.assess("support42", fingerprint) == "INCONCLUSIVE"
+    assert contract.is_rewardable("support42", fingerprint) is False
+    with direct_vm.expect_revert("already terminal"):
+        contract.assess("support42", fingerprint)
+
+
 def test_validator_rejects_changed_source(direct_vm, direct_deploy, direct_alice):
     contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
     direct_vm.warp(AFTER)
@@ -118,6 +138,65 @@ def test_validator_rejects_injected_decision(direct_vm, direct_deploy, direct_al
     assert direct_vm.run_validator(leader_result=forged) is False
 
 
+def test_validator_rejects_extra_fields_and_hidden_positive_inconclusive(
+        direct_vm, direct_deploy, direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    mock(direct_vm)
+    contract.assess("support42", fingerprint)
+    receipt = contract.get_receipt("support42")
+    forged = {
+        "status": "INCONCLUSIVE", "proxy_after": int(receipt["proxy_after"]),
+        "proxy_digest": receipt["proxy_digest"], "a": "IMPROVED", "b": "IMPROVED",
+        "a_quote": A_QUOTE, "b_quote": B_QUOTE,
+        "a_digest": receipt["outcome_a_digest"],
+        "b_digest": receipt["outcome_b_digest"],
+        "extra": "must be rejected",
+    }
+    assert direct_vm.run_validator(leader_result=forged) is False
+
+
+def test_validator_rechecks_positive_witness_audit(direct_vm, direct_deploy,
+                                                   direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    mock(direct_vm)
+    contract.assess("support42", fingerprint)
+    # Re-fetch the same pages, but make the validator's independent audit veto
+    # the leader's favourable witness. The proposed positive result cannot pass.
+    direct_vm.clear_mocks()
+    mock(direct_vm, audit="VETO")
+    assert direct_vm.run_validator() is False
+
+
+def test_oversized_source_with_distant_contradiction_fails_closed(
+        direct_vm, direct_deploy, direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    distant_contradiction = A_QUOTE + (" harmless context" * 900) + (
+        " newer update: unresolved issues materially worsened")
+    direct_vm.clear_mocks()
+    direct_vm.mock_web(r"metrics\.example\.org/program.json", {
+        "status": 200,
+        "body": json.dumps({"program_id": "support42", "baseline": 20,
+                            "current": 80, "unit": "tickets"}),
+    })
+    direct_vm.mock_web(r"outcomes\.example\.net/primary", {
+        "status": 200, "body": distant_contradiction,
+    })
+    direct_vm.mock_web(r"feedback\.example\.com/corroboration", {
+        "status": 200, "body": B_PAGE,
+    })
+    direct_vm.mock_llm(r"<source_name>corroboration</source_name>", json.dumps({
+        "verdict": "IMPROVED", "quote": B_QUOTE, "reason": "CURRENT_EVIDENCE",
+    }))
+    direct_vm.mock_llm(r"GOODHART adversarial", json.dumps({"audit": "SAFE"}))
+    assert len(distant_contradiction) > 12000
+    assert contract.assess("support42", fingerprint) == "INCONCLUSIVE"
+    assert contract.is_rewardable("support42", fingerprint) is False
+    assert contract.get_receipt("support42")["outcome_a"] == "UNKNOWN"
+
+
 def test_assess_owner_only(direct_vm, direct_deploy, direct_alice):
     contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
     direct_vm.warp(AFTER)
@@ -125,6 +204,13 @@ def test_assess_owner_only(direct_vm, direct_deploy, direct_alice):
     direct_vm.sender = direct_alice
     with direct_vm.expect_revert("only owner"):
         contract.assess("support42", fingerprint)
+
+
+def test_cancel_is_owner_only(direct_vm, direct_deploy, direct_alice):
+    contract, _ = deploy(direct_vm, direct_deploy, direct_alice)
+    with direct_vm.prank(direct_alice):
+        with direct_vm.expect_revert("only owner"):
+            contract.cancel("support42")
 
 
 def test_early_rejected(direct_vm, direct_deploy, direct_alice):

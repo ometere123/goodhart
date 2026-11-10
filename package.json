@@ -5,8 +5,9 @@
   "description": "Goodhart: consensus-backed proxy/objective divergence protocol (no frontend)",
   "scripts": {
     "cli:version": "genlayer --version",
-    "preflight": "python3 scripts/preflight.py",
-    "test:offline": "python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "preflight": "python scripts/preflight.py",
+    "test:offline": "python -m unittest discover -s tests -p \"test_*.py\" -v",
+    "test:mutation": "python scripts/mutation_check.py",
     "network:check": "node scripts/assert_studionet.mjs",
     "deploy:studionet": "node scripts/assert_studionet.mjs && genlayer deploy --contract contracts/goodhart.py --rpc https://studio.genlayer.com/api"
   },

@@ -7,9 +7,12 @@ import unittest
 
 
 SOURCE = pathlib.Path(__file__).resolve().parents[1] / "contracts" / "goodhart.py"
+GATE_SOURCE = SOURCE.parent / "reward_gate.py"
 TREE = ast.parse(SOURCE.read_text())
-NAMES = {"_host", "_page_body", "_json_dict", "_proxy_json", "_improved", "_escape",
-         "_decision", "_classify", "_sha", "_prompt", "_audit_prompt"}
+GATE_TREE = ast.parse(GATE_SOURCE.read_text())
+NAMES = {"_host", "_clean_page", "_page_body", "_json_dict", "_proxy_json",
+         "_improved", "_escape", "_decision", "_classify", "_audit_value",
+         "_sha", "_prompt", "_audit_prompt"}
 SUBSET = ast.Module(body=[n for n in TREE.body if isinstance(n, (ast.FunctionDef,))
                           and n.name in NAMES], type_ignores=[])
 ctx = {
@@ -21,9 +24,14 @@ ctx = {
     "INCONCLUSIVE": "INCONCLUSIVE", "REWARDABLE": "REWARDABLE",
     "DIVERGENT": "DIVERGENT", "UNSUPPORTED": "UNSUPPORTED",
     "PROXY_NOT_IMPROVED": "PROXY_NOT_IMPROVED", "MAX_QUOTE": 200,
-    "MAX_PAGE": 12000, "MAX_REASON": 48,
+    "MAX_PAGE": 12000, "MAX_PAGE_BYTES": 48000, "MAX_REASON": 48,
 }
 exec(compile(SUBSET, str(SOURCE), "exec"), ctx)
+GATE_SUBSET = ast.Module(
+    body=[n for n in GATE_TREE.body if isinstance(n, ast.FunctionDef)
+          and n.name == "_hex64"], type_ignores=[])
+gate_ctx = {}
+exec(compile(GATE_SUBSET, str(GATE_SOURCE), "exec"), gate_ctx)
 
 
 class PureRules(unittest.TestCase):
@@ -115,6 +123,29 @@ class PureRules(unittest.TestCase):
         bad = dict(good, quote="satisfaction soared to 99 percent")
         self.assertEqual(ctx["_classify"](bad, p)["verdict"], "UNKNOWN")
 
+    def test_model_schema_is_exact(self):
+        page = "Customer resolution improved materially."
+        result = ctx["_classify"]({
+            "verdict": "IMPROVED",
+            "quote": "resolution improved materially",
+            "reason": "POSITIVE",
+            "extra": "ignored by no one",
+        }, page)
+        self.assertEqual(result["verdict"], "UNKNOWN")
+
+    def test_unknown_cannot_carry_a_witness(self):
+        page = "The outcome remains unclear despite the report."
+        result = ctx["_classify"]({
+            "verdict": "UNKNOWN",
+            "quote": "outcome remains unclear",
+            "reason": "AMBIGUOUS",
+        }, page)
+        self.assertEqual(result, {
+            "verdict": "UNKNOWN",
+            "quote": "",
+            "reason": "UNSUPPORTED_WITNESS",
+        })
+
     def test_duplicate_quote_is_not_stable_witness(self):
         q = "Resolution clearly improved."
         self.assertEqual(ctx["_classify"]({"verdict": "IMPROVED", "quote": q,
@@ -137,13 +168,28 @@ class PureRules(unittest.TestCase):
         self.assertEqual(ctx["_page_body"]("data  line\nhere"), "data line here")
         self.assertEqual(ctx["_page_body"]("x" * 12001), "")
 
+    def test_distant_counterevidence_is_not_hidden_by_a_cutoff(self):
+        witness = "objective improved from 40% to 70%"
+        contradiction = "newer update: objective worsened from 70% to 20%"
+        page = witness + (" harmless context" * 800) + contradiction
+        self.assertGreater(len(page), 12000)
+        self.assertEqual(ctx["_clean_page"](page), "")
+
+    def test_multibyte_page_remains_complete_at_the_character_bound(self):
+        page = "é" * 12000
+        self.assertEqual(ctx["_clean_page"](page), page)
+
+    def test_control_character_source_fails_closed(self):
+        self.assertEqual(ctx["_clean_page"]("valid\x01later"), "")
+
 
 class ContractInvariantTests(unittest.TestCase):
     def test_consensus_not_format_only(self):
         code = SOURCE.read_text()
         self.assertIn("self._observe(program_id, program, ts)", code)
         self.assertIn("proposed[key] != independent[key]", code)
-        self.assertIn("page.count(proposed[key]) != 1", code)
+        self.assertIn("_audit_witness", code)
+        self.assertIn("_sha(\"GOODHART_SOURCE_V1\"", code)
 
     def test_no_llm_controls_reward_amount(self):
         code = SOURCE.read_text()
@@ -157,6 +203,37 @@ class ContractInvariantTests(unittest.TestCase):
                   and any(isinstance(dec, ast.Attribute) and dec.attr == "write"
                           for dec in n.decorator_list)]
         self.assertEqual(writes, ["register_program", "assess", "cancel"])
+
+
+class RewardGateInvariantTests(unittest.TestCase):
+    def test_action_and_fingerprint_are_exact_hashes(self):
+        valid = "a" * 64
+        self.assertTrue(gate_ctx["_hex64"](valid))
+        self.assertFalse(gate_ctx["_hex64"]("A" * 64))
+        self.assertFalse(gate_ctx["_hex64"]("a" * 63))
+        self.assertFalse(gate_ctx["_hex64"]("a" * 65))
+
+    def test_consumer_is_primary_predicate_bound(self):
+        code = GATE_SOURCE.read_text()
+        self.assertIn("goodhart.view().is_rewardable", code)
+        self.assertIn("gl.message.sender_address != self.beneficiary", code)
+        self.assertIn("action substitution", code)
+        self.assertIn("replay", code)
+        self.assertNotIn("gl.nondet", code)
+
+    def test_consumer_has_only_one_write_and_one_view(self):
+        writes = [m.name for n in GATE_TREE.body if isinstance(n, ast.ClassDef)
+                  and n.name == "RewardGate" for m in n.body
+                  if isinstance(m, ast.FunctionDef)
+                  and any(isinstance(dec, ast.Attribute) and dec.attr == "write"
+                          for dec in m.decorator_list)]
+        views = [m.name for n in GATE_TREE.body if isinstance(n, ast.ClassDef)
+                 and n.name == "RewardGate" for m in n.body
+                 if isinstance(m, ast.FunctionDef)
+                 and any(isinstance(dec, ast.Attribute) and dec.attr == "view"
+                         for dec in m.decorator_list)]
+        self.assertEqual(writes, ["execute_once"])
+        self.assertEqual(views, ["was_executed"])
 
 
 if __name__ == "__main__":

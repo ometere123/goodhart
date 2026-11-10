@@ -30,6 +30,7 @@ MIXED = "MIXED"
 UNKNOWN = "UNKNOWN"
 OUTCOMES = (IMPROVED, STABLE, DEGRADED, MIXED, UNKNOWN)
 MAX_PAGE = 12000
+MAX_PAGE_BYTES = MAX_PAGE * 4
 MAX_QUOTE = 200
 MAX_REASON = 48
 MAX_ATTEMPTS = 2
@@ -96,27 +97,51 @@ def _now() -> int:
     return int(datetime.now(timezone.utc).timestamp())
 
 
-def _page_body(raw: typing.Any) -> str:
+def _clean_page(raw: typing.Any) -> str:
+    """Return one complete, bounded evidence snapshot or an empty failure.
+
+    A page is never sliced to fit the nondeterministic prompt.  Slicing would
+    let a leader or validator hide later counterevidence.  The character and
+    UTF-8 byte caps are checked before and after normalization so every
+    accepted snapshot is the complete normalized body under the same bound.
+    """
     if isinstance(raw, bytes):
         try:
             raw = raw.decode("utf-8")
         except UnicodeDecodeError:
             return ""
-    if not isinstance(raw, str) or len(raw) > MAX_PAGE or "\x00" in raw:
+    if not isinstance(raw, str) or len(raw) > MAX_PAGE:
+        return ""
+    try:
+        if len(raw.encode("utf-8")) > MAX_PAGE_BYTES:
+            return ""
+    except UnicodeEncodeError:
+        return ""
+    if any((ord(ch) < 32 and ch not in "\t\n\r") or ord(ch) == 127
+           for ch in raw):
         return ""
     # Only collapse whitespace, never truncate. Distant counterevidence matters.
-    return " ".join(raw.split())
+    page = " ".join(raw.split())
+    if not page or len(page) > MAX_PAGE:
+        return ""
+    try:
+        if len(page.encode("utf-8")) > MAX_PAGE_BYTES:
+            return ""
+    except UnicodeEncodeError:
+        return ""
+    return page
+
+
+def _page_body(raw: typing.Any) -> str:
+    """Compatibility name retained for host-side tests and older tooling."""
+    return _clean_page(raw)
 
 
 def _json_dict(value: typing.Any) -> dict:
     if isinstance(value, dict):
         return value
     if not isinstance(value, str):
-        try:
-            value = dict(value)
-            return value if isinstance(value, dict) else {}
-        except (ValueError, TypeError):
-            return {}
+        return {}
     try:
         value = json.loads(value)
     except (TypeError, ValueError):
@@ -207,6 +232,8 @@ def _audit_prompt(objective: str, indicator: str, page: str, proposed: str) -> s
 
 def _classify(raw: typing.Any, page: str) -> dict:
     data = _json_dict(raw)
+    if set(data) != {"verdict", "quote", "reason"}:
+        return {"verdict": UNKNOWN, "quote": "", "reason": "MALFORMED"}
     verdict = data.get("verdict", UNKNOWN)
     quote = data.get("quote", "")
     reason = data.get("reason", "UNSPECIFIED")
@@ -216,10 +243,21 @@ def _classify(raw: typing.Any, page: str) -> dict:
             reason != reason.upper()):
         return {"verdict": UNKNOWN, "quote": "", "reason": "MALFORMED"}
     if verdict == UNKNOWN:
+        if quote != "":
+            return {"verdict": UNKNOWN, "quote": "", "reason": "UNSUPPORTED_WITNESS"}
         return {"verdict": UNKNOWN, "quote": "", "reason": reason}
     if not (12 <= len(quote) <= MAX_QUOTE and page.count(quote) == 1):
         return {"verdict": UNKNOWN, "quote": "", "reason": "UNSUPPORTED_WITNESS"}
     return {"verdict": verdict, "quote": quote, "reason": reason}
+
+
+def _audit_value(raw: typing.Any) -> str:
+    """Parse the adversarial-audit response as an exact one-field schema."""
+    data = _json_dict(raw)
+    audit = data.get("audit")
+    if set(data) != {"audit"} or audit not in ("SAFE", "VETO", "UNCERTAIN"):
+        return ""
+    return audit
 
 
 @allow_storage
@@ -349,7 +387,7 @@ class Goodhart(gl.Contract):
             final_url = getattr(response, "url", None)
             if final_url and str(final_url) != url:
                 return "", "REDIRECT", True
-            page = _page_body(response.body)
+            page = _clean_page(response.body)
         except Exception:
             return "", "SOURCE_ERROR", True
         if not page:
@@ -372,12 +410,12 @@ class Goodhart(gl.Contract):
                     "transient": True}
         if result["verdict"] == IMPROVED:
             try:
-                audit = _json_dict(gl.nondet.exec_prompt(
+                audit = _audit_value(gl.nondet.exec_prompt(
                     _audit_prompt(program.objective, program.indicator, page,
                                   result["quote"]), response_format="json"))
             except Exception:
-                audit = {}
-            if audit.get("audit") != "SAFE":
+                audit = ""
+            if audit != "SAFE":
                 result = {"verdict": UNKNOWN, "quote": "", "reason": "AUDIT_VETO"}
         return {"verdict": result["verdict"], "quote": result["quote"],
                 "digest": digest, "transient": False}
@@ -432,9 +470,16 @@ class Goodhart(gl.Contract):
                              (obj["b"], obj["b_quote"])):
             if not isinstance(quote, str):
                 return False
+            if any(ord(ch) < 32 or ord(ch) == 127 for ch in quote):
+                return False
             if label == UNKNOWN and quote:
                 return False
             if label != UNKNOWN and not 12 <= len(quote) <= MAX_QUOTE:
+                return False
+        if obj["status"] in (INCONCLUSIVE, RETRYABLE):
+            # A recoverable or inconclusive result must carry uncertainty. It
+            # may never be represented as a hidden positive/negative verdict.
+            if obj["a"] != UNKNOWN and obj["b"] != UNKNOWN:
                 return False
         if obj["status"] not in (INCONCLUSIVE, RETRYABLE, PROXY_NOT_IMPROVED):
             if not obj["a_digest"] or not obj["b_digest"]:
@@ -445,7 +490,19 @@ class Goodhart(gl.Contract):
             return False
         if obj["status"] == PROXY_NOT_IMPROVED and (obj["a"] != UNKNOWN or obj["b"] != UNKNOWN):
             return False
+        if obj["status"] == PROXY_NOT_IMPROVED and (obj["a_digest"] or obj["b_digest"]):
+            return False
         return True
+
+    def _audit_witness(self, program: Program, page: str, quote: str) -> bool:
+        """Independently challenge the leader's exact positive witness."""
+        try:
+            audit = _audit_value(gl.nondet.exec_prompt(
+                _audit_prompt(program.objective, program.indicator, page, quote),
+                response_format="json"))
+        except Exception:
+            return False
+        return audit == "SAFE"
 
     def _consensus(self, program_id: str, program: Program, ts: int) -> dict:
         def leader():
@@ -470,10 +527,16 @@ class Goodhart(gl.Contract):
                 # Witnesses may differ but must exist verbatim in the exact
                 # independently fetched full snapshot.
                 if proposed["status"] not in (PROXY_NOT_IMPROVED, INCONCLUSIVE, RETRYABLE):
-                    for url, key in ((program.outcome_a_url, "a_quote"),
-                                     (program.outcome_b_url, "b_quote")):
+                    for url, key, digest_key in (
+                            (program.outcome_a_url, "a_quote", "a_digest"),
+                            (program.outcome_b_url, "b_quote", "b_digest")):
                         page, failure, _ = self._fetch(url)
-                        if failure or page.count(proposed[key]) != 1:
+                        if (failure or page.count(proposed[key]) != 1 or
+                                _sha("GOODHART_SOURCE_V1", {"url": url, "page": page})
+                                != proposed[digest_key]):
+                            return False
+                        if (proposed["status"] == REWARDABLE and
+                                not self._audit_witness(program, page, proposed[key])):
                             return False
                 return True
             except Exception:

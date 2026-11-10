@@ -1,51 +1,64 @@
 # Deployment and proof ledger
 
-**Target (locked):** `studionet` / **61999** / `https://studio.genlayer.com/api`.
-**CLI (locked):** repository-local `genlayer@0.39.1`.
+## Locked target
 
-## What has been verified in this workspace
+- Network: `studionet`
+- Chain ID: `61999` (`0xf22f`)
+- RPC: `https://studio.genlayer.com/api`
+- Repository-local CLI: `genlayer@0.39.1`
+- GenVM runner: `v0.2.12`
+- GenVM linter: `0.11.0`
 
-- `npm run cli:version`: `0.39.1`.
-- `npm run network:check`: JSON-RPC `eth_chainId` returned `0xf22f` (61999).
-- Local Python contract source compiled, GenVM linter accepted both contracts.
-- Offline and Direct Mode suites run with the pinned `v0.2.12` SDK.
+`node scripts/assert_studionet.mjs` verifies both the RPC result and the
+repository-local CLI immediately before any deployment. No global CLI,
+development network or chain 61997 is an accepted fallback.
 
-## Live deployment status
+## Baseline and local verification
 
-**Not deployed.** The connected workspace has no configured GenLayer CLI
-account (`genlayer account list` returned no accounts). No private keys were
-imported, no transaction submitted and no StudioNet deployment address exists
-from this build. Do not claim finalized live consensus from local tests.
+The starting repository was `03c3e1e84560decde9815cf9a419eb68252589e9`.
+Before hardening, the unchanged host suite passed 23 tests and preflight passed
+12 assertions. The pinned Direct Mode suite initially could not start on this
+Windows host because `genlayer-test==0.29.2` attempted to unlink an open stdin
+temporary file. The repository now contains a Windows-only test shim that
+defers that cleanup until VM teardown; the native contract runner itself is
+unchanged.
 
-## On a funded machine
+Current local verification after hardening:
 
-1. `npm ci --ignore-scripts` then `npm run network:check`.
-2. `./node_modules/.bin/genlayer account list` and select a funded wallet using
-   the CLI's normal authenticated account workflow. Never paste a private key
-   into this repo or a GitHub issue.
-3. `npm run deploy:studionet` (Goodhart main contract).
-4. After finalized status, save the transaction and deployed address below.
-5. Deploy `contracts/reward_gate.py` separately, using the **actual** registry
-   address, registered programme ID, returned fingerprint, beneficiary and
-   64-character exact action commitment as constructor args.
-6. Run live favourable/divergent/ambiguous programme cases with actual public
-   sources. Avoid claiming controlled test fixtures are independent external
-   publishers. Verify `is_rewardable` both before and after finalization.
-7. Populate receipts and source hashes, verify explorer visibility and commit
-   the evidence links. Do not edit historical receipts.
+- Offline/host tests: 31 passed.
+- Direct Mode: 15 passed, including native `direct_vm.run_validator()`.
+- Combined pytest collection: 46 passed.
+- Preflight: 18 assertions passed.
+- Python compileall: passed.
+- `genvm-lint 0.11.0`, `GENVM_VERSION=v0.2.12`: lint and semantic validation
+  passed for both contracts; JSON schema extraction passed for both.
+- RPC guard: confirmed `eth_chainId = 0xf22f`.
+
+These are local or simulated checks, not StudioNet transaction evidence.
+
+## Live deployment ledger
+
+No live deployment is recorded until a finalized transaction, readback and
+source-parity check are captured from the corrected source. Do not replace the
+pending fields with a submission or accepted transaction status.
 
 | Evidence | Value |
 |---|---|
-| Goodhart address | Pending |
+| Goodhart address | Pending finalized deployment |
 | Goodhart deployment transaction | Pending |
-| Finalized status | Pending |
-| RewardGate address/transaction | Pending |
-| Favourable programme ID/receipt | Pending |
-| Divergent programme ID/receipt | Pending |
-| Consumer gating proof | Pending |
+| Goodhart final status | Pending |
+| RewardGate address/transaction | Pending finalized deployment |
+| Positive programme/fingerprint/receipt | Pending |
+| Divergent programme/receipt | Pending |
+| RewardGate blocked/success/replay proofs | Pending |
+| Source SHA-256 | Record from final committed bytes |
+| Deployed-source parity | Pending; never infer from local hash alone |
 
-### Reviewer proof standard
+## Live proof standard
 
-Keep raw transaction hashes, explorer URLs, contract code hashes, programme
-fingerprints, the public source URLs and the verbatim observed receipts.
-Distinguish a submitted/accepted transaction from an executed/finalized one.
+The final ledger must retain the exact transaction hash, final status, signer
+address where appropriate, explorer URL, programme fingerprint, public source
+URLs and post-finality readbacks for registration, assessment and consumer
+calls. A public page is not proof of publisher identity, real-world action,
+causality or payment. Controlled fixtures must be labelled as fixtures. Direct
+Mode output must never be substituted for finalized consensus.

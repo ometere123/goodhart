@@ -25,9 +25,22 @@ jobs:
           npm run cli:version
           npm run preflight
           python -m compileall -q contracts scripts tests
+      - name: GenVM lint and schema (pinned runner v0.2.12)
+        env:
+          GENVM_VERSION: v0.2.12
+          PYTHONIOENCODING: utf-8
+        run: |
+          genvm-lint check contracts/goodhart.py
+          genvm-lint check contracts/reward_gate.py
+          genvm-lint schema contracts/goodhart.py --json > goodhart.schema.json
+          genvm-lint schema contracts/reward_gate.py --json > reward_gate.schema.json
       - name: Host-side tests
         run: npm run test:offline
+      - name: Focused mutation checks
+        run: npm run test:mutation
       - name: Native Direct Mode tests (GenVM v0.2.12)
         run: python -m pytest -q tests/direct
       - name: Verify explicit StudioNet 61999 endpoint
         run: npm run network:check
+      - name: Dependency audit (locked graph)
+        run: npm audit --omit=dev --omit=optional --audit-level=high
