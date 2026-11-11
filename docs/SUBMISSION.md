@@ -43,6 +43,12 @@ selects a recipient or reward amount.
   PENDING, fingerprint `5a6a6dacbd577d77d19bf0f07af4cd655260309c5654a2ea18b7c111a908d750`.
 - Current gate controls: nonrewardable action, substituted action and
   unauthorized caller all finalized with rollback; `was_executed=false`.
+- Final bounded positive attempt: `positive-final-20261111` registered in
+  `0x8e8134f30b1353c9dce32a92a9fd36cb2d0ea28922f98d512899ebed6afc7c15`,
+  accepted in `0xf78e7e983d5488faa7bddb16e8f037ce2755a7d16323d9cfb4254db975461058`,
+  and assessed in `0xc79c00d72d8be00e79030032fc60ea86e956ae86c9777c44b1ce5f1df0afe12c`.
+  It finalized terminal `INCONCLUSIVE` with proxy `20 -> 80` and
+  `UNKNOWN / UNKNOWN` outcomes.
 
 ## Limitations and readiness
 
@@ -56,6 +62,6 @@ Submission recommendation: CONDITIONAL — the two scoped binding corrections
 are implemented, tested, deployed and source-parity verified. Current-primary
 fail-closed consumer controls are live. A fresh current-primary REWARDABLE
 assessment followed by successful authorized RewardGate execution and replay
-remains unverified; the historical positive proof is not promoted to current
-build evidence. Do not claim complete end-to-end current-build integration
-unless that receipt is required and later obtained.
+remains unverified; the final bounded attempt was terminal INCONCLUSIVE. The
+historical positive proof is not promoted to current-build evidence. Do not
+claim complete end-to-end current-build integration.

@@ -39,5 +39,8 @@ RewardGate `0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B` have finalized
 deployment parity. The bound control programme is PENDING/nonrewardable. Its
 correct action, substituted action and unauthorized caller all finalized with
 rollback and left `was_executed=false`. A fresh current-primary positive
-assessment and successful current-primary consumer action were not obtained;
-the historical positive RewardGate proof is not current-primary coverage.
+assessment attempt `0xc79c00d72d8be00e79030032fc60ea86e956ae86c9777c44b1ce5f1df0afe12c`
+finalized execution SUCCESS but terminal `INCONCLUSIVE` with proxy `20 -> 80`
+and `UNKNOWN / UNKNOWN` outcomes. A successful current-primary consumer action
+was not obtained; the historical positive RewardGate proof is not current-primary
+coverage.

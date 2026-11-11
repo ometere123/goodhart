@@ -81,6 +81,41 @@ rollback and left `was_executed(expected_action_hash)=false`:
 - unauthorized caller: `0xd14b8e4be53e2a6fc50874fea2a1e32f676792071a41949fd99e14b9d4443cb8`,
   `only beneficiary`.
 
+## Final bounded positive attempt on the corrected primary
+
+This was the single fresh positive attempt requested for the current primary.
+The controlled fixture commit was
+`cee6f2c18598ee116d360d5d3ab0420f7de335cf`; all URLs were anchored to that
+immutable revision and preflighted with HTTPS, no redirect, HTTP 200 and full
+bodies below the 12,000-character limit:
+
+- proxy: `https://raw.githubusercontent.com/ometere123/goodhart/cee6f2c18598ee116d360d5d3ab0420f7de335cf/fixtures/live/proxy_positive_final_20261111.json`, 84 normalized characters;
+- outcome A: `https://cdn.jsdelivr.net/gh/ometere123/goodhart@cee6f2c18598ee116d360d5d3ab0420f7de335cf/fixtures/live/outcome_reward_permission_a.md`, 584 normalized characters;
+- outcome B: `https://raw.githack.com/ometere123/goodhart/cee6f2c18598ee116d360d5d3ab0420f7de335cf/fixtures/live/outcome_reward_permission_b.md`, 556 normalized characters.
+
+| Field | Finalized/read-back value |
+|---|---|
+| Programme | `positive-final-20261111` |
+| Owner | `0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7` |
+| Beneficiary | `0x271FeAA6764865c2c8309e4C603D10650DbD0F95` |
+| Fingerprint | `76f9f685830c7c76731b357a821901b531598e3bc5118f62bbe3a51af6ef8dd6` |
+| Registration | `0x8e8134f30b1353c9dce32a92a9fd36cb2d0ea28922f98d512899ebed6afc7c15`; finalized `MAJORITY_AGREE`, execution `SUCCESS` |
+| Earliest/deadline | `1794389422` / `1794992422` |
+| Acceptance | `0xf78e7e983d5488faa7bddb16e8f037ce2755a7d16323d9cfb4254db975461058`; finalized `MAJORITY_AGREE`, execution `SUCCESS`; `accepted=1` |
+| Assessment | `0xc79c00d72d8be00e79030032fc60ea86e956ae86c9777c44b1ce5f1df0afe12c`; finalized `MAJORITY_AGREE`, execution `SUCCESS` |
+| Assessment result | terminal `INCONCLUSIVE`; attempts `1`; proxy `20 -> 80`; outcomes `UNKNOWN` / `UNKNOWN`; `is_rewardable=false` |
+| Proxy digest | `d6e17f4d700ec75783dbbcd36fe01e3ad33a43fd65da8821e9615e4c5b0c0bfa` |
+| Outcome A digest | `92afacefbe8e4925583944f5a75f1a8bf75b3839c90de29b986c88e0a9aa7453` |
+| Outcome B digest | `5295b192952ab486a308c52db3e4dd2d731ae318aa6864e4934c6367c8a59bd9` |
+
+The source preflight succeeded, but the finalized semantic observation carried
+no quote witnesses and both labels were `UNKNOWN`. The available transaction
+trace method `gen_dbg_traceTransaction` returned RPC `Method not found`, so no
+stronger substep-level cause is claimed. The confirmed contract-level cause is
+fail-closed semantic uncertainty, not source substitution or oversized input.
+Because the programme is terminal `INCONCLUSIVE`, no bounded retry was
+available and no new RewardGate was deployed for it.
+
 ## Historical consent and fail-closed proofs on the superseded primary
 
 The following receipts were finalized against the prior primary

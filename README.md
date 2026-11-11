@@ -148,8 +148,12 @@ fail-closed controls and deployed-source parity are verified. A fresh finalized
 `REWARDABLE` receipt on this primary was not obtained, so the current gate has
 only been proven to reject nonrewardable, substituted and unauthorized actions;
 it has not been proven to execute successfully or replay successfully on this
-build. The earlier positive RewardGate proof remains historical evidence for a
-previous primary only and is not proof of this deployment.
+build. The final bounded positive attempt, programme
+`positive-final-20261111`, finalized successfully as `INCONCLUSIVE` with proxy
+`20 -> 80` and `UNKNOWN / UNKNOWN` outcome labels; the source preflight was
+200/no-redirect/bounded for all three frozen URLs. The earlier positive
+RewardGate proof remains historical evidence for a previous primary only and is
+not proof of this deployment.
 
 ## Tests and source-trust limits
 

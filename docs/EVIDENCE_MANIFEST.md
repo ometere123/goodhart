@@ -36,6 +36,22 @@ beneficiary addresses, but its finalized readback is `accepted=0`, `PENDING`,
 so it has no reward permission. The current bound RewardGate is
 0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B.
 
+A fresh bounded positive attempt used `positive-final-20261111`, owner
+0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7 and beneficiary
+0x271FeAA6764865c2c8309e4C603D10650DbD0F95. Its proxy and two outcome URLs
+were anchored to fixture commit
+cee6f2c18598ee116d360d5d3ab0420f7de335cf and preflighted as HTTP 200 with no
+redirect and bounded complete bodies. Registration
+0x8e8134f30b1353c9dce32a92a9fd36cb2d0ea28922f98d512899ebed6afc7c15 and
+beneficiary acceptance
+0xf78e7e983d5488faa7bddb16e8f037ce2755a7d16323d9cfb4254db975461058 both
+finalized successfully. Assessment
+0xc79c00d72d8be00e79030032fc60ea86e956ae86c9777c44b1ce5f1df0afe12c
+finalized `MAJORITY_AGREE`/execution `SUCCESS`, but committed terminal
+`INCONCLUSIVE`, proxy `20 -> 80`, outcome labels `UNKNOWN / UNKNOWN`, and
+`is_rewardable=false`. No current-primary positive permission or new gate
+execution is claimed.
+
 Its correct-action call
 0x978d3ada3f03f9dbfe758d6a8166128f5a0c9e67ca32c82ac2d17669e8dbc0de rolled
 back at the primary predicate (`underlying objective not certified`). A
