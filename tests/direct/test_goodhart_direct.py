@@ -1,5 +1,6 @@
 """GenVM Direct Mode integration, including native validator re-observation."""
 import json
+from gltest.direct import create_address
 
 PROXY = "https://metrics.example.org/program.json"
 OUT_A = "https://outcomes.example.net/primary"
@@ -16,35 +17,63 @@ B_PAGE = ("External customer feedback: the share of customers whose issue remain
           "unresolved dropped from 29 percent to 10 percent across the reporting period.")
 A_QUOTE = "reopened customer issues fell from 30 percent to 11 percent"
 B_QUOTE = "share of customers whose issue remained unresolved dropped from 29 percent to 10 percent"
+A_DEGRADED_PAGE = (
+    "Independent support outcome report: despite more tickets being closed, "
+    "unresolved customer issues increased from 30 percent to 44 percent and "
+    "repeat contacts rose from 11 percent to 23 percent for the same cohort."
+)
+A_DEGRADED_QUOTE = "unresolved customer issues increased from 30 percent to 44 percent"
+B_DEGRADED_PAGE = (
+    "External customer feedback: repeat contacts increased from 10 percent to "
+    "21 percent across the same reporting period; the underlying outcome degraded."
+)
+B_DEGRADED_QUOTE = "repeat contacts increased from 10 percent to 21 percent"
+A_STABLE_PAGE = (
+    "Independent support outcome report: unresolved customer issues remained at "
+    "30 percent and repeat contacts stayed at 11 percent for the same cohort."
+)
+A_STABLE_QUOTE = "unresolved customer issues remained at 30 percent"
+B_STABLE_PAGE = (
+    "External customer feedback: the unresolved share stayed at 29 percent "
+    "throughout the reporting period; no material improvement was established."
+)
+B_STABLE_QUOTE = "unresolved share stayed at 29 percent"
 
 
-def deploy(vm, deployer, beneficiary):
+def beneficiary_address():
+    # create_address must be called after the Direct Mode SDK is loaded.
+    return create_address("alice")
+
+
+def deploy(vm, deployer, beneficiary, accept=True):
     vm.warp(BASE)
     goodhart = deployer("contracts/goodhart.py", sdk_version="v0.2.12")
-    # The fixture is raw bytes; obtain the runtime Address after SDK loading.
-    from gltest.direct import create_address
-    beneficiary = create_address("alice")
+    beneficiary = beneficiary_address()
     fingerprint = goodhart.register_program(
         "support42", beneficiary, "Support outcomes",
         OBJECTIVE, INDICATOR, "Tickets closed", "tickets", "UP", 20, 3000,
         PROXY, OUT_A, OUT_B, 60, 7200,
     )
+    if accept:
+        with vm.prank(beneficiary):
+            assert goodhart.accept_program("support42", fingerprint) == fingerprint
     return goodhart, fingerprint
 
 
 def mock(vm, a_verdict="IMPROVED", b_verdict="IMPROVED", current=80,
-         audit="SAFE"):
+         audit="SAFE", a_page=A_PAGE, b_page=B_PAGE,
+         a_quote=A_QUOTE, b_quote=B_QUOTE):
     vm.clear_mocks()
     vm.mock_web(r"metrics\.example\.org/program.json",
                 {"status": 200, "body": json.dumps({"program_id": "support42",
                     "baseline": 20, "current": current, "unit": "tickets"})})
-    vm.mock_web(r"outcomes\.example\.net/primary", {"status": 200, "body": A_PAGE})
-    vm.mock_web(r"feedback\.example\.com/corroboration", {"status": 200, "body": B_PAGE})
+    vm.mock_web(r"outcomes\.example\.net/primary", {"status": 200, "body": a_page})
+    vm.mock_web(r"feedback\.example\.com/corroboration", {"status": 200, "body": b_page})
     vm.mock_llm(r"<source_name>primary</source_name>", json.dumps({
-        "verdict": a_verdict, "quote": A_QUOTE if a_verdict != "UNKNOWN" else "",
+        "verdict": a_verdict, "quote": a_quote if a_verdict != "UNKNOWN" else "",
         "reason": "CURRENT_EVIDENCE"}))
     vm.mock_llm(r"<source_name>corroboration</source_name>", json.dumps({
-        "verdict": b_verdict, "quote": B_QUOTE if b_verdict != "UNKNOWN" else "",
+        "verdict": b_verdict, "quote": b_quote if b_verdict != "UNKNOWN" else "",
         "reason": "CURRENT_EVIDENCE"}))
     vm.mock_llm(r"GOODHART adversarial", json.dumps({"audit": audit}))
 
@@ -65,9 +94,35 @@ def test_aligns_only_two_improvements(direct_vm, direct_deploy, direct_alice):
 def test_proxy_gain_with_underlying_deterioration(direct_vm, direct_deploy, direct_alice):
     contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
     direct_vm.warp(AFTER)
-    mock(direct_vm, b_verdict="DEGRADED")
+    mock(direct_vm, b_verdict="DEGRADED", b_page=B_DEGRADED_PAGE,
+         b_quote=B_DEGRADED_QUOTE)
     assert contract.assess("support42", fingerprint) == "DIVERGENT"
     assert contract.is_rewardable("support42", fingerprint) is False
+    assert contract.get_receipt("support42")["outcome_b"] == "DEGRADED"
+    assert direct_vm.run_validator() is True
+
+
+def test_proxy_gain_with_unchanged_underlying_outcomes_is_unsupported(
+        direct_vm, direct_deploy, direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    mock(direct_vm, a_verdict="STABLE", b_verdict="STABLE",
+         a_page=A_STABLE_PAGE, b_page=B_STABLE_PAGE,
+         a_quote=A_STABLE_QUOTE, b_quote=B_STABLE_QUOTE)
+    assert contract.assess("support42", fingerprint) == "UNSUPPORTED"
+    assert contract.is_rewardable("support42", fingerprint) is False
+    assert contract.get_receipt("support42")["outcome_a"] == "STABLE"
+    assert direct_vm.run_validator() is True
+
+
+def test_both_deteriorating_sources_are_divergent(direct_vm, direct_deploy,
+                                                   direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    mock(direct_vm, a_verdict="DEGRADED", b_verdict="DEGRADED",
+         a_page=A_DEGRADED_PAGE, b_page=B_DEGRADED_PAGE,
+         a_quote=A_DEGRADED_QUOTE, b_quote=B_DEGRADED_QUOTE)
+    assert contract.assess("support42", fingerprint) == "DIVERGENT"
     assert contract.get_receipt("support42")["outcome_b"] == "DEGRADED"
     assert direct_vm.run_validator() is True
 
@@ -150,6 +205,21 @@ def test_validator_rejects_injected_decision(direct_vm, direct_deploy, direct_al
     assert direct_vm.run_validator(leader_result=forged) is False
 
 
+def test_validator_rejects_fabricated_deterioration(direct_vm, direct_deploy,
+                                                    direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    mock(direct_vm)
+    contract.assess("support42", fingerprint)
+    receipt = contract.get_receipt("support42")
+    forged = {"status": "DIVERGENT", "proxy_after": int(receipt["proxy_after"]),
+              "proxy_digest": receipt["proxy_digest"], "a": "DEGRADED",
+              "b": "DEGRADED", "a_quote": A_QUOTE, "b_quote": B_QUOTE,
+              "a_digest": receipt["outcome_a_digest"],
+              "b_digest": receipt["outcome_b_digest"]}
+    assert direct_vm.run_validator(leader_result=forged) is False
+
+
 def test_validator_rejects_extra_fields_and_hidden_positive_inconclusive(
         direct_vm, direct_deploy, direct_alice):
     contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
@@ -209,18 +279,19 @@ def test_oversized_source_with_distant_contradiction_fails_closed(
     assert contract.get_receipt("support42")["outcome_a"] == "UNKNOWN"
 
 
-def test_assess_owner_only(direct_vm, direct_deploy, direct_alice):
+def test_assess_rejects_unrelated_caller(direct_vm, direct_deploy, direct_alice,
+                                         direct_bob):
     contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
     direct_vm.warp(AFTER)
     mock(direct_vm)
-    direct_vm.sender = direct_alice
-    with direct_vm.expect_revert("only owner"):
-        contract.assess("support42", fingerprint)
+    with direct_vm.prank(direct_bob):
+        with direct_vm.expect_revert("only owner or beneficiary"):
+            contract.assess("support42", fingerprint)
 
 
-def test_cancel_is_owner_only(direct_vm, direct_deploy, direct_alice):
+def test_cancel_is_owner_only(direct_vm, direct_deploy, direct_alice, direct_bob):
     contract, _ = deploy(direct_vm, direct_deploy, direct_alice)
-    with direct_vm.prank(direct_alice):
+    with direct_vm.prank(direct_bob):
         with direct_vm.expect_revert("only owner"):
             contract.cancel("support42")
 
@@ -232,9 +303,76 @@ def test_early_rejected(direct_vm, direct_deploy, direct_alice):
 
 
 def test_cancel_blocks_assessment(direct_vm, direct_deploy, direct_alice):
-    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice, accept=False)
     contract.cancel("support42")
     assert contract.is_rewardable("support42", fingerprint) is False
     direct_vm.warp(AFTER)
     with direct_vm.expect_revert("already terminal"):
         contract.assess("support42", fingerprint)
+
+
+def test_beneficiary_acceptance_is_authenticated_and_public(
+        direct_vm, direct_deploy, direct_alice, direct_bob):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice,
+                                   accept=False)
+    assert contract.get_program("support42")["accepted"] == "0"
+    with direct_vm.prank(direct_bob):
+        with direct_vm.expect_revert("only beneficiary"):
+            contract.accept_program("support42", fingerprint)
+    with direct_vm.prank(beneficiary_address()):
+        with direct_vm.expect_revert("stale program or fingerprint"):
+            contract.accept_program("support42", "0" * 64)
+        assert contract.accept_program("support42", fingerprint) == fingerprint
+    state = contract.get_program("support42")
+    assert state["accepted"] == "1"
+    assert int(state["accepted_at"]) > 0
+    with direct_vm.prank(beneficiary_address()):
+        with direct_vm.expect_revert("already accepted"):
+            contract.accept_program("support42", fingerprint)
+
+
+def test_acceptance_after_window_is_rejected(direct_vm, direct_deploy,
+                                             direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice,
+                                   accept=False)
+    direct_vm.warp(AFTER)
+    with direct_vm.prank(beneficiary_address()):
+        with direct_vm.expect_revert("acceptance window closed"):
+            contract.accept_program("support42", fingerprint)
+
+
+def test_assessment_requires_acceptance(direct_vm, direct_deploy, direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice,
+                                   accept=False)
+    direct_vm.warp(AFTER)
+    mock(direct_vm)
+    with direct_vm.expect_revert("program not accepted"):
+        contract.assess("support42", fingerprint)
+
+
+def test_owner_cannot_cancel_after_acceptance(direct_vm, direct_deploy,
+                                              direct_alice):
+    contract, _ = deploy(direct_vm, direct_deploy, direct_alice)
+    with direct_vm.expect_revert("accepted program cannot be cancelled"):
+        contract.cancel("support42")
+
+
+def test_beneficiary_can_assess_without_owner_transaction(
+        direct_vm, direct_deploy, direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice)
+    direct_vm.warp(AFTER)
+    mock(direct_vm)
+    with direct_vm.prank(beneficiary_address()):
+        assert contract.assess("support42", fingerprint) == "REWARDABLE"
+    assert contract.is_rewardable("support42", fingerprint) is True
+
+
+def test_cancel_before_acceptance_is_irreversible(direct_vm, direct_deploy,
+                                                  direct_alice):
+    contract, fingerprint = deploy(direct_vm, direct_deploy, direct_alice,
+                                   accept=False)
+    contract.cancel("support42")
+    assert contract.get_program("support42")["status"] == "CANCELLED"
+    with direct_vm.prank(beneficiary_address()):
+        with direct_vm.expect_revert("already terminal"):
+            contract.accept_program("support42", fingerprint)

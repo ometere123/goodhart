@@ -23,9 +23,11 @@ assert "gl.nondet.exec_prompt" in source
 assert "def _improved(" in source and "def _decision(" in source
 assert "def _clean_page(" in source and "return page[:MAX_PAGE]" not in source
 assert "def _audit_witness(" in source
+assert "def accept_program(" in source
+assert "only owner or beneficiary may assess" in source
 assert "is_rewardable" in source and "is_rewardable" in gate
 assert "61997" not in (ROOT / "package.json").read_text()
 assert "studionet-dev" not in (ROOT / "package.json").read_text()
 assert not list(ROOT.rglob(".env"))
-assert len(re.findall(r"@gl.public.write", source)) == 3
-print("GOODHART: offline architecture/network pin preflight PASS (18 assertions)")
+assert len(re.findall(r"@gl.public.write", source)) == 4
+print("GOODHART: offline architecture/network pin preflight PASS (20 assertions)")

@@ -1,12 +1,13 @@
 # v0.2.18
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
-"""GOODHART: an owner-authenticated, public-evidence proxy/objective divergence gate.
+"""GOODHART: a beneficiary-consented, public-evidence proxy/objective divergence gate.
 
 This contract does not measure reality exhaustively. It verifies a frozen public
 evidence surface, never pays from an LLM's opinion, and exposes an exact-hash
 reward permission to other Intelligent Contracts. Registration authenticates the
-owner and freezes a beneficiary binding; it is not a beneficiary-consent or
-publisher-identity protocol. No frontend is required.
+owner and freezes a beneficiary binding; the typed beneficiary must then accept
+the exact fingerprint before assessment. Acceptance is not publisher identity
+or proof of real-world evidence independence. No frontend is required.
 """
 from genlayer import *
 
@@ -180,6 +181,21 @@ def _escape(value: str) -> str:
     return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _acceptance_reason(sender: str, beneficiary: str, accepted: int,
+                       fingerprint: str, expected: str, now: int,
+                       earliest_at: int) -> str:
+    """Return a deterministic rejection reason for beneficiary acceptance."""
+    if accepted:
+        return "already accepted"
+    if sender != beneficiary:
+        return "only beneficiary may accept"
+    if fingerprint != expected:
+        return "stale program or fingerprint"
+    if now >= earliest_at:
+        return "acceptance window closed"
+    return ""
+
+
 def _decision(proxy_ok: bool, a: str, b: str) -> str:
     if not proxy_ok:
         return PROXY_NOT_IMPROVED
@@ -284,6 +300,8 @@ class Program:
     deadline: u256
     status: str
     attempts: u8
+    accepted: u8
+    accepted_at: u256
 
 
 @allow_storage
@@ -377,9 +395,34 @@ class Goodhart(gl.Contract):
             proxy_name, proxy_unit, direction, baseline, min_delta_bps,
             proxy_url, outcome_a_url, outcome_b_url, fingerprint,
             u256(now), u256(now + delay), u256(now + lifetime), PENDING, u8(0),
+            u8(0), u256(0),
         )
         self.count += u256(1)
         return fingerprint
+
+    @gl.public.write
+    def accept_program(self, program_id: str, expected_fingerprint: str) -> str:
+        """Authenticate beneficiary consent to the complete frozen programme.
+
+        The fingerprint returned by registration commits every programme term,
+        including the typed beneficiary, evidence URLs and assessment window.
+        Acceptance is only possible before the assessment window opens.
+        """
+        program = self._program(program_id)
+        now = _now()
+        reason = _acceptance_reason(
+            gl.message.sender_address.as_hex, program.beneficiary.as_hex,
+            int(program.accepted), program.fingerprint, expected_fingerprint,
+            now, int(program.earliest_at),
+        )
+        if program.status != PENDING:
+            _error("already terminal")
+        if reason:
+            _error(reason)
+        program.accepted = u8(1)
+        program.accepted_at = u256(now)
+        self.programs[program_id] = program
+        return program.fingerprint
 
     def _fetch(self, url: str) -> tuple[str, str, bool]:
         try:
@@ -559,10 +602,13 @@ class Goodhart(gl.Contract):
     @gl.public.write
     def assess(self, program_id: str, expected_fingerprint: str) -> str:
         program = self._program(program_id)
-        if gl.message.sender_address != program.owner:
-            _error("only owner may assess")
         if program.fingerprint != expected_fingerprint or program.status != PENDING:
             _error("stale program or already terminal")
+        if int(program.accepted) == 0:
+            _error("program not accepted")
+        if (gl.message.sender_address != program.owner and
+                gl.message.sender_address != program.beneficiary):
+            _error("only owner or beneficiary may assess")
         now = _now()
         if not int(program.earliest_at) <= now <= int(program.deadline):
             _error("outside assessment window")
@@ -593,8 +639,12 @@ class Goodhart(gl.Contract):
     @gl.public.write
     def cancel(self, program_id: str) -> None:
         program = self._program(program_id)
-        if gl.message.sender_address != program.owner or program.status != PENDING:
-            _error("only owner may cancel a pending program")
+        if gl.message.sender_address != program.owner:
+            _error("only owner may cancel")
+        if program.status != PENDING:
+            _error("already terminal")
+        if int(program.accepted) != 0:
+            _error("accepted program cannot be cancelled")
         program.status = CANCELLED
         self.programs[program_id] = program
 
@@ -619,7 +669,8 @@ class Goodhart(gl.Contract):
                 "outcome_a_url": p.outcome_a_url, "outcome_b_url": p.outcome_b_url,
                 "fingerprint": p.fingerprint, "earliest_at": str(p.earliest_at),
                 "deadline": str(p.deadline), "status": p.status,
-                "attempts": str(p.attempts)}
+                "attempts": str(p.attempts), "accepted": str(int(p.accepted)),
+                "accepted_at": str(p.accepted_at)}
 
     @gl.public.view
     def get_receipt(self, program_id: str) -> dict[str, str]:

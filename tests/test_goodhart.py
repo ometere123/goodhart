@@ -13,7 +13,7 @@ TREE = ast.parse(SOURCE.read_text())
 GATE_TREE = ast.parse(GATE_SOURCE.read_text())
 NAMES = {"_host", "_clean_page", "_page_body", "_json_dict", "_proxy_json",
          "_improved", "_escape", "_decision", "_classify", "_audit_value",
-         "_sha", "_prompt", "_audit_prompt"}
+         "_sha", "_prompt", "_audit_prompt", "_acceptance_reason"}
 SUBSET = ast.Module(body=[n for n in TREE.body if isinstance(n, (ast.FunctionDef,))
                           and n.name in NAMES], type_ignores=[])
 ctx = {
@@ -48,6 +48,25 @@ exec(compile(GATE_SUBSET, str(GATE_SOURCE), "exec"), gate_ctx)
 
 
 class PureRules(unittest.TestCase):
+    def test_acceptance_reason_requires_beneficiary_and_fingerprint(self):
+        f = ctx["_acceptance_reason"]
+        self.assertEqual(
+            f("owner", "beneficiary", 0, "f" * 64, "f" * 64, 100, 200),
+            "only beneficiary may accept",
+        )
+        self.assertEqual(
+            f("beneficiary", "beneficiary", 0, "f" * 64, "0" * 64, 100, 200),
+            "stale program or fingerprint",
+        )
+        self.assertEqual(
+            f("beneficiary", "beneficiary", 0, "f" * 64, "f" * 64, 200, 200),
+            "acceptance window closed",
+        )
+        self.assertEqual(
+            f("beneficiary", "beneficiary", 0, "f" * 64, "f" * 64, 100, 200),
+            "",
+        )
+
     def test_true_keccak_vectors_and_domain_hash(self):
         empty = keccak.new(digest_bits=256)
         empty.update(b"")
@@ -215,6 +234,8 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertIn("proposed[key] != independent[key]", code)
         self.assertIn("_audit_witness", code)
         self.assertIn("_sha(\"GOODHART_SOURCE_V1\"", code)
+        self.assertIn("def accept_program", code)
+        self.assertIn("only owner or beneficiary may assess", code)
 
     def test_no_llm_controls_reward_amount(self):
         code = SOURCE.read_text()
@@ -227,7 +248,7 @@ class ContractInvariantTests(unittest.TestCase):
         writes = [n.name for n in class_node.body if isinstance(n, ast.FunctionDef)
                   and any(isinstance(dec, ast.Attribute) and dec.attr == "write"
                           for dec in n.decorator_list)]
-        self.assertEqual(writes, ["register_program", "assess", "cancel"])
+        self.assertEqual(writes, ["register_program", "accept_program", "assess", "cancel"])
 
 
 class RewardGateInvariantTests(unittest.TestCase):

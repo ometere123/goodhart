@@ -18,6 +18,7 @@ SOURCE = ROOT / "contracts" / "goodhart.py"
 NAMES = {
     "_clean_page", "_json_dict", "_proxy_json", "_improved", "_decision",
     "_classify", "_sha", "_escape", "_prompt", "_audit_prompt",
+    "_acceptance_reason",
 }
 
 
@@ -107,5 +108,17 @@ must_fail(
     }, "objective improved materially")["verdict"] == "UNKNOWN"),
 )
 
-print("GOODHART: mutation checks PASS (4 weakened variants killed)")
+must_fail(
+    "beneficiary acceptance authentication",
+    original.replace(
+        "if sender != beneficiary:", "if sender == beneficiary:", 1,
+    ),
+    lambda ctx: require(
+        ctx["_acceptance_reason"](
+            "owner", "beneficiary", 0, "f" * 64, "f" * 64, 100, 200,
+        ) == "only beneficiary may accept"
+    ),
+)
+
+print("GOODHART: mutation checks PASS (5 weakened variants killed)")
 
