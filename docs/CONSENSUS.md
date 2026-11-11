@@ -18,6 +18,19 @@ HTTP errors, redirects, final-URL changes, permanent failures, empty or oversize
 
 Three hostnames are not three authenticated publishers. The stable runtime can bind URLs, bytes, digests and transaction actors, but cannot prove real-world ownership or independent measurement. No decorative attestation contract was added because no trusted authority root exists.
 
-## Current boundary
+## Consumer binding and current boundary
 
-The consented primary is 0xc6f159b8A0475D32c39033131D5b4E496581f38a. Its beneficiary assessment 0x339d9a253852b49287f4e7607d4e6bee17056a001a10f73051f41a1e8ab32731 finalized successfully but returned INCONCLUSIVE with UNKNOWN / UNKNOWN. A fresh positive assessment finalized MAJORITY_DISAGREE and left its programme pending. Historical positive and RewardGate receipts are retained but are not proof of this source.
+RewardGate first reads the exact programme from the typed Goodhart interface and
+requires its id, fingerprint and authenticated beneficiary to equal the
+consumer’s frozen constructor values. Only then does it call
+`is_rewardable`; the caller must also be that same beneficiary and provide the
+exact unused action hash. A constructor-supplied beneficiary cannot authorize a
+different beneficiary’s programme.
+
+The corrected primary is
+0xbea069743269137772E42873aB0D2dE3E9EDC411. Its bound control programme is
+PENDING/nonrewardable. The current gate at
+0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B rejected a correct action against
+that state, an action substitution and an unauthorized caller; all finalized
+with rollback and `was_executed=false`. Historical positive and RewardGate
+receipts are retained but are not proof of this corrected source.

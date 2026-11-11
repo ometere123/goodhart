@@ -10,8 +10,20 @@ Direct Mode exercises Goodhart and native direct_vm.run_validator() source re-ob
 
 ## Deployment status
 
-The final consented Goodhart primary is 0xc6f159b8A0475D32c39033131D5b4E496581f38a with source SHA-256 7d2dae0e1c8c5e3b7ecf26c79fc3534beb8909f2394ef157baeb814f3f138106.
+The corrected Goodhart primary is
+0xbea069743269137772E42873aB0D2dE3E9EDC411 with source SHA-256
+10414807d2545f999915e62300d8b385c2888ae36b6faaf55176be5163fa6bab.
 
-No RewardGate has been deployed against this address because no fresh REWARDABLE receipt was finalized on it. The historical gate 0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0 is bound to the previous primary 0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881; its successful action and replay rollback remain historical evidence only.
+RewardGate is deployed against this exact address at
+0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B with source SHA-256
+612cc909263f8d1bff3d7ec4d9ceeab0f0f31ee2252bb39f79c7443305eda20b. Its
+constructor beneficiary is additionally checked against the primary programme
+readback before the primary `is_rewardable` predicate is called.
 
-The final-primary beneficiary assessment finalized INCONCLUSIVE and is_rewardable=false. A new gate should be deployed only after a fresh finalized reward receipt is independently read back.
+The bound control programme is PENDING/nonrewardable. The current gate’s
+correct-action, substituted-action and unauthorized-caller transactions all
+finalized with rollback, and `was_executed` remained false. A successful current
+primary action and replay proof therefore remain unverified. The historical gate
+0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0 is bound to the previous primary
+0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881; its successful action and replay
+rollback remain historical evidence only.

@@ -21,7 +21,9 @@ binary returned 0.39.1.
 
 ## Baseline and local verification
 
-The pre-change baseline was 101e702106b523e2f98409583454a7ef00d90b3d. The
+The pre-change baseline for this final binding closeout was
+4c972d47dfb381d56618a4ac6cd7089187b2b406. The binding corrections were
+committed as 22e1e067f34971ddba85162a5ed2299baa196780. The earlier
 beneficiary-consent implementation was committed as
 07abd66cf7c6b1170115d9fdcc83cadf3e25accc; fixture additions followed in
 fa5d0617a3689cbebacfdd47153b04b06e57f4b3 and
@@ -29,29 +31,62 @@ fa5d0617a3689cbebacfdd47153b04b06e57f4b3 and
 
 Latest executed results:
 
-- unittest offline: 33 passed
-- Direct Mode: 25 passed
-- combined pytest: 58 passed
+- unittest offline: 34 passed
+- Direct Mode: 26 passed
+- combined pytest: 60 passed
 - preflight: 20 assertions passed
-- mutation checks: 5 weakened variants killed
+- mutation checks: 6 weakened variants killed
 - compileall: passed
 - GenVM lint/schema: both contracts passed with linter 0.11.0 and runner v0.2.12
 - production npm audit: no high-severity production vulnerability was reported
 - network guard: passed for studionet / 61999
 
-## Current final primary
+## Current corrected primary
 
 | Field | Verified value |
 |---|---|
-| Goodhart | 0xc6f159b8A0475D32c39033131D5b4E496581f38a |
-| Deployment transaction | 0x7cb4e4544e03257b6fcbbce512977f288d9ec5af3b93acb2c8a4b33bb7b5cc58 |
+| Goodhart | 0xbea069743269137772E42873aB0D2dE3E9EDC411 |
+| Deployment transaction | 0xcd47489c9e46e18b595b086a9cee71f3d9330070bab1e88977caceba321a7841 |
 | Finality/result | finalized MAJORITY_AGREE, execution SUCCESS |
-| Source SHA-256 | 7d2dae0e1c8c5e3b7ecf26c79fc3534beb8909f2394ef157baeb814f3f138106 |
-| Source bytes | 30,156; exact byte equality through gen_getContractCode |
-| Owner signer | 0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7 |
-| Beneficiary signer | 0x271FeAA6764865c2c8309e4c603D10650DbD0F95 |
+| Source SHA-256 | 10414807d2545f999915e62300d8b385c2888ae36b6faaf55176be5163fa6bab |
+| Source bytes | 30,279; exact byte equality through gen_getContractCode |
+| Deployment signer | 0x271FeAA6764865c2c8309e4C603D10650DbD0F95 |
 
-## Consent and fail-closed live proofs
+## Current-primary control and RewardGate
+
+The control programme `binding-control-20261111` was registered in
+`0x5a4979e38fdedc34614e7d0a972062d92493934609acb3725cdb94bc23d864f7` with
+owner `0x271FeAA6764865c2c8309e4C603D10650DbD0F95`, beneficiary
+`0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7`, and fingerprint
+`5a6a6dacbd577d77d19bf0f07af4cd655260309c5654a2ea18b7c111a908d750`.
+The finalized readback is `accepted=0`, `PENDING`; no reward permission exists.
+An acceptance attempt with an incorrect fingerprint rolled back in
+`0x1be8967057e71f7d50425b93b49bfe84a547ed6e2ceef686b6d270e09920aa6a`.
+
+The corrected RewardGate is bound to this primary at
+`0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B`, deployed in
+`0xcfc3d88f13f89a63989f309e0605e562df885be8bd2c71813b3a4f2941efa95d`.
+The gate deployment finalized with `MAJORITY_AGREE` and execution `SUCCESS`.
+Its source is 3,159 bytes with SHA-256
+`612cc909263f8d1bff3d7ec4d9ceeab0f0f31ee2252bb39f79c7443305eda20b`, exactly
+matching the local file.
+
+Current-primary gate controls were all finalized consensus with execution
+rollback and left `was_executed(expected_action_hash)=false`:
+
+- correct action: `0x978d3ada3f03f9dbfe758d6a8166128f5a0c9e67ca32c82ac2d17669e8dbc0de`,
+  `underlying objective not certified`;
+- substituted action: `0x86176c54f009f00d052f766324d2239fc34c5f449bd36d8371765771a1ea1bee`,
+  `action substitution`;
+- unauthorized caller: `0xd14b8e4be53e2a6fc50874fea2a1e32f676792071a41949fd99e14b9d4443cb8`,
+  `only beneficiary`.
+
+## Historical consent and fail-closed proofs on the superseded primary
+
+The following receipts were finalized against the prior primary
+`0xc6f159b8A0475D32c39033131D5b4E496581f38a`. They remain useful historical
+evidence of the consent lifecycle but are not proof of the corrected primary
+`0xbea069743269137772E42873aB0D2dE3E9EDC411`.
 
 ### consent-live-20261111
 
@@ -70,7 +105,7 @@ Latest executed results:
 - Duplicate acceptance: 0xa3954b037be034275aa8aa05aa7842d2987785fcbc3cd127f8b051236b93b08d; finalized expected rollback already accepted.
 - Beneficiary assessment: 0x4c2c619a8aea75c5407132bbbef923b44d8bff7d95098afea0e7a463afbdf0b8; execution SUCCESS, fail-closed INCONCLUSIVE.
 
-## Fresh positive attempts on the current primary
+## Historical positive attempts on the superseded primary
 
 The exact controlled outcome fixture pair was used only as mechanics evidence. It
 does not prove publisher independence or a real-world beneficiary outcome.
@@ -95,8 +130,10 @@ does not prove publisher independence or a real-world beneficiary outcome.
   Assessment 0x6c5a6e976fdf5553ee18e06e04b52738754f6148c27db2fb06bc1a370af326e3
   finalized with an expected stale-program rollback.
 
-No current-primary REWARDABLE receipt was obtained. No RewardGate was deployed
-against the current primary.
+No `REWARDABLE` receipt was obtained on the superseded primary. The current-primary
+RewardGate is deployed and its fail-closed, substitution and unauthorized-call
+controls were exercised, but no successful current-primary action or replay
+receipt can be claimed because the bound programme is not rewardable.
 
 ## Historical proof, retained but not promoted
 
@@ -116,16 +153,20 @@ Those receipts prove the previous primary only and are not new-primary proof.
 ## Source integrity and release status
 
 - Current Goodhart local SHA-256:
-  7d2dae0e1c8c5e3b7ecf26c79fc3534beb8909f2394ef157baeb814f3f138106.
+  10414807d2545f999915e62300d8b385c2888ae36b6faaf55176be5163fa6bab.
 - Current RewardGate local SHA-256:
-  29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22.
+  612cc909263f8d1bff3d7ec4d9ceeab0f0f31ee2252bb39f79c7443305eda20b.
 - Current Goodhart deployed bytes match the final local contract bytes exactly.
-- The RewardGate hash was verified against the historical gate deployment, not a
-  current-primary deployment.
+- The RewardGate deployed bytes match the final local contract bytes exactly.
 - No explorer URL is claimed because the configured explorer endpoint returned
   HTTP 503 during prior closeout.
 - No secrets, frontend, backend, database, Docker or wallet UI are committed.
 
-Release readiness: NOT READY. The exact remaining blocker is a fresh finalized
-REWARDABLE assessment on the current final primary followed by a newly bound
-RewardGate deployment, authorized execution and replay verification.
+Release recommendation: CONDITIONAL. The two scoped binding defects are fixed,
+tested, deployed and source-parity verified, and current-primary fail-closed
+consumer controls are live. A fresh current-primary `REWARDABLE` assessment,
+successful authorized RewardGate action and replay receipt remain unverified;
+the historical positive proof belongs to an earlier primary. Hold a claim of
+complete end-to-end current-build integration if that receipt is mandatory for
+the reviewer, but do not weaken consensus or turn the controlled fixture into
+false positive evidence.

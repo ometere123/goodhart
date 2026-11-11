@@ -29,9 +29,30 @@ The repository contains bounded fixtures under fixtures/live/ with explicit same
 
 ## Current live status
 
-On the new primary 0xc6f159b8A0475D32c39033131D5b4E496581f38a, beneficiary assessment 0x339d9a253852b49287f4e7607d4e6bee17056a001a10f73051f41a1e8ab32731 finalized MAJORITY_AGREE and execution SUCCESS, but returned INCONCLUSIVE with UNKNOWN / UNKNOWN; is_rewardable returned false.
+The corrected primary is
+0xbea069743269137772E42873aB0D2dE3E9EDC411, deployed from the binding-fix
+source. The control programme `binding-control-20261111` has distinct owner and
+beneficiary addresses, but its finalized readback is `accepted=0`, `PENDING`,
+so it has no reward permission. The current bound RewardGate is
+0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B.
 
-The best fresh positive attempt, programme fixture-rewardable-20261110, finalized assessment 0x08a77973f7c1fabe1e8a1ab2d2f429a7631393bb96507a61ec2a40fd8333d805 as MAJORITY_DISAGREE, leaving the programme pending. A later retry 0x7bc69ae7fe6d188787e806fe0fd17ce7d2dd3e431afd88d755fc5848339408bf finalized consensus but rolled back outside assessment window. No fresh REWARDABLE state or new-primary RewardGate execution is claimed.
+Its correct-action call
+0x978d3ada3f03f9dbfe758d6a8166128f5a0c9e67ca32c82ac2d17669e8dbc0de rolled
+back at the primary predicate (`underlying objective not certified`). A
+substituted action rolled back in
+0x86176c54f009f00d052f766324d2239fc34c5f449bd36d8371765771a1ea1bee, and an
+unauthorized caller rolled back in
+0xd14b8e4be53e2a6fc50874fea2a1e32f676792071a41949fd99e14b9d4443cb8.
+`was_executed` remained false. These are current-source fail-closed proofs;
+they are not a successful reward execution.
+
+The earlier assessment
+0x339d9a253852b49287f4e7607d4e6bee17056a001a10f73051f41a1e8ab32731 belongs to
+the superseded primary 0xc6f159b8A0475D32c39033131D5b4E496581f38a. It finalized
+MAJORITY_AGREE and execution SUCCESS but returned INCONCLUSIVE with UNKNOWN /
+UNKNOWN; is_rewardable returned false.
+
+The best earlier positive attempt, programme fixture-rewardable-20261110, finalized assessment 0x08a77973f7c1fabe1e8a1ab2d2f429a7631393bb96507a61ec2a40fd8333d805 as MAJORITY_DISAGREE, leaving the superseded programme pending. A later retry 0x7bc69ae7fe6d188787e806fe0fd17ce7d2dd3e431afd88d755fc5848339408bf finalized consensus but rolled back outside the assessment window. No current-primary REWARDABLE state or successful current-primary RewardGate action is claimed.
 
 ## Trust boundary
 

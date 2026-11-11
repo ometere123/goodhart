@@ -11,6 +11,9 @@
 ## Threats and mitigations
 
 - Owner withdrawal or assessment veto: beneficiary acceptance is required; accepted programmes cannot be cancelled by the owner, and either owner or beneficiary can initiate assessment.
+- Self-beneficiary and consent collapse: registration rejects an owner address
+  equal to the beneficiary, so the owner cannot satisfy the distinct-party
+  consent model by accepting its own programme.
 - Unauthorized acceptance or substitution: the actual sender must equal the typed beneficiary and the supplied fingerprint must equal the frozen value. Duplicate and late acceptance revert.
 - Metric gaming: proxy movement is necessary but never sufficient; both outcome sources must survive independent semantic review.
 - Malicious leader: validators independently fetch, parse, classify, compare digests and audit positive witnesses. Leader excerpts do not become authoritative evidence.
@@ -18,7 +21,10 @@
 - Redirect/source substitution: redirects, final-URL changes, permanent HTTP failures, empty bodies and source identity failures fail closed.
 - Malformed model output: exact schemas, enum checks, quote bounds, digest widths and cross-field rules reject incomplete results.
 - Retry griefing: only the owner or accepted beneficiary can assess; retries are bounded and unresolved recovery cannot grant clearance.
-- Replay/misbinding: RewardGate checks primary address, programme, fingerprint, beneficiary and exact action, then records a one-shot execution.
+- Replay/misbinding: RewardGate checks primary address, programme, fingerprint,
+  and the beneficiary read back from that exact Goodhart programme—not only
+  the constructor beneficiary—then checks the caller and exact action before
+  recording a one-shot execution.
 
 ## Invariants
 

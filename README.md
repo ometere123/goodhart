@@ -97,55 +97,64 @@ py -3.12 -m compileall -q contracts scripts tests
 Direct Mode is a simulated VM with controlled sources; it is not live
 StudioNet evidence.
 
-## Current final-source deployment
+## Current corrected deployment
 
-The beneficiary-consented source is deployed byte-for-byte at
-`0xc6f159b8A0475D32c39033131D5b4E496581f38a`.
+The final corrected primary, including the distinct-owner/beneficiary guard,
+is deployed byte-for-byte at
+`0xbea069743269137772E42873aB0D2dE3E9EDC411`.
 
 - Deployment transaction:
-  `0x7cb4e4544e03257b6fcbbce512977f288d9ec5af3b93acb2c8a4b33bb7b5cc58`
+  `0xcd47489c9e46e18b595b086a9cee71f3d9330070bab1e88977caceba321a7841`
 - Finality/result: finalized `MAJORITY_AGREE`, execution `SUCCESS`
 - `contracts/goodhart.py` SHA-256:
-  `7d2dae0e1c8c5e3b7ecf26c79fc3534beb8909f2394ef157baeb814f3f138106`
-- Deployed source: 30,156 bytes, exact byte equality with the local file
-- Owner signer: `0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7`
-- Beneficiary signer: `0x271FeAA6764865c2c8309e4c603D10650DbD0F95`
+  `10414807d2545f999915e62300d8b385c2888ae36b6faaf55176be5163fa6bab`
+- Deployed source: 30,279 bytes, exact byte equality with the local file
+- Deployment signer: `0x271FeAA6764865c2c8309e4C603D10650DbD0F95`
 
-The new primary has finalized consent and authorization proofs:
+The current-primary control programme `binding-control-20261111` was registered
+with owner `0x271FeAA6764865c2c8309e4C603D10650DbD0F95`, beneficiary
+`0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7`, and fingerprint
+`5a6a6dacbd577d77d19bf0f07af4cd655260309c5654a2ea18b7c111a908d750`.
+Registration finalized successfully in
+`0x5a4979e38fdedc34614e7d0a972062d92493934609acb3725cdb94bc23d864f7` and
+the readback remains `accepted=0`, `PENDING`. An attempted acceptance with an
+incorrect fingerprint rolled back in
+`0x1be8967057e71f7d50425b93b49bfe84a547ed6e2ceef686b6d270e09920aa6a`.
 
-- Unauthorized owner acceptance on `consent-live-20261111`:
-  `0x3dea3a13aa16982b8786020491f7158e8917d42d815af705717ac17a950847f3`,
-  expected rollback `only beneficiary may accept`.
-- Beneficiary acceptance:
-  `0x5aafe84d15b2d72125327371bd542b77ec0947b3ddc9294c4d124086ac604511`,
-  successful.
-- Beneficiary assessment:
-  `0x339d9a253852b49287f4e7607d4e6bee17056a001a10f73051f41a1e8ab32731`,
-  finalized `MAJORITY_AGREE`, execution `SUCCESS`, returned `INCONCLUSIVE`,
-  outcomes `UNKNOWN` / `UNKNOWN`, and `is_rewardable=false`.
-- Owner cancellation after acceptance on `consent-positive-20261111`:
-  `0xc805ff4c3147415a1443a5793bd22013c68ff3e92a49b342a87a9dd34c23a66d`,
-  expected rollback `accepted program cannot be cancelled`.
+The corrected RewardGate is deployed against this exact primary at
+`0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B`:
+
+- Deployment transaction:
+  `0xcfc3d88f13f89a63989f309e0605e562df885be8bd2c71813b3a4f2941efa95d`
+- Finality/result: finalized `MAJORITY_AGREE`, execution `SUCCESS`
+- `contracts/reward_gate.py` SHA-256:
+  `612cc909263f8d1bff3d7ec4d9ceeab0f0f31ee2252bb39f79c7443305eda20b`
+- Deployed source: 3,159 bytes, exact byte equality with the local file
+
+The current gate verifies the beneficiary returned by the primary programme,
+not only its constructor argument. A correct-action call rolled back with
+`underlying objective not certified` in
+`0x978d3ada3f03f9dbfe758d6a8166128f5a0c9e67ca32c82ac2d17669e8dbc0de`; an
+action substitution rolled back in
+`0x86176c54f009f00d052f766324d2239fc34c5f449bd36d8371765771a1ea1bee`; and
+an unauthorized caller rolled back with `only beneficiary` in
+`0xd14b8e4be53e2a6fc50874fea2a1e32f676792071a41949fd99e14b9d4443cb8`.
+`was_executed` remains `false` after these failures.
 
 ## Release status
 
-The new primary’s consent hardening, independent validator tests, fail-closed
-external controls and source parity are verified. A fresh finalized
-`REWARDABLE` receipt on this new primary has not been obtained: the best-bound
-positive attempt finalized `MAJORITY_DISAGREE` and remained pending; its later
-retry rolled back outside the assessment window. A separate attempted positive
-fixture was correctly `INCONCLUSIVE` when its proxy file was not yet present at
-the frozen GitHub commit. A subsequent committed-fixture attempt did not
-record acceptance before its window and its assessment rolled back as stale.
-
-Therefore a new RewardGate bound to the final primary has not been deployed or
-claimed. The earlier positive RewardGate proof remains historical evidence for
-the previous primary only and is not proof of this consented deployment.
+The corrected primary’s distinct-address guard, independent validator tests,
+fail-closed controls and deployed-source parity are verified. A fresh finalized
+`REWARDABLE` receipt on this primary was not obtained, so the current gate has
+only been proven to reject nonrewardable, substituted and unauthorized actions;
+it has not been proven to execute successfully or replay successfully on this
+build. The earlier positive RewardGate proof remains historical evidence for a
+previous primary only and is not proof of this deployment.
 
 ## Tests and source-trust limits
 
-The latest local run recorded 33 unittest/offline tests, 25 Direct Mode tests,
-58 combined pytest tests, 20 preflight assertions and 5 mutation variants
+The latest local run recorded 34 unittest/offline tests, 26 Direct Mode tests,
+60 combined pytest tests, 20 preflight assertions and 6 mutation variants
 killed. Both contracts pass the compatible GenVM lint/schema checks described in
 the deployment ledger. Direct Mode includes native validator re-observation,
 but controlled semantic inputs are not a live-world publisher proof.

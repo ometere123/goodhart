@@ -18,11 +18,11 @@
 
 ## Latest local results
 
-- Offline unittest suite: 33 passed.
-- Direct Mode: 25 passed, including native validator re-observation.
-- Combined pytest: 58 passed.
+- Offline unittest suite: 34 passed.
+- Direct Mode: 26 passed, including native validator re-observation.
+- Combined pytest: 60 passed.
 - Preflight: 20 assertions passed.
-- Mutation checks: 5/5 weakened variants killed.
+- Mutation checks: 6/6 weakened variants killed.
 - Python compilation: passed.
 - GenVM lint/schema: both contracts passed with linter 0.11.0 and runner v0.2.12.
 - Stable RPC guard: eth_chainId=0xf22f / 61999.
@@ -34,4 +34,10 @@ Direct Mode uses controlled pages and mocked model responses where indicated. It
 
 ## Live evidence level
 
-The new consented primary has finalized acceptance, unauthorized acceptance rejection, post-acceptance owner-cancellation rejection and a beneficiary-triggered fail-closed INCONCLUSIVE assessment. A fresh positive assessment was not finalized as a reward permission: one attempt was MAJORITY_DISAGREE, one was a stale/out-of-window rollback, and committed-fixture attempts were fail-closed or acceptance-incomplete. The historical positive RewardGate proof is not current-primary coverage.
+The corrected primary `0xbea069743269137772E42873aB0D2dE3E9EDC411` and bound
+RewardGate `0x46c240DCAA5bDD440f0C41a3499a4096471e2F8B` have finalized
+deployment parity. The bound control programme is PENDING/nonrewardable. Its
+correct action, substituted action and unauthorized caller all finalized with
+rollback and left `was_executed=false`. A fresh current-primary positive
+assessment and successful current-primary consumer action were not obtained;
+the historical positive RewardGate proof is not current-primary coverage.
