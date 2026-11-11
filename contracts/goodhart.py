@@ -363,6 +363,8 @@ class Goodhart(gl.Contract):
         program_id = _id(program_id)
         if program_id in self.programs or int(self.count) >= MAX_PROGRAMS:
             _error("program id unavailable")
+        if beneficiary.as_hex == gl.message.sender_address.as_hex:
+            _error("owner and beneficiary must differ")
         title = _text(title, 5, 120, "title")
         objective = _text(objective, 35, 1800, "objective")
         indicator = _text(indicator, 35, 1800, "indicator")

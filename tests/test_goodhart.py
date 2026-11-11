@@ -42,7 +42,7 @@ ctx["Keccak256"] = _keccak256
 exec(compile(SUBSET, str(SOURCE), "exec"), ctx)
 GATE_SUBSET = ast.Module(
     body=[n for n in GATE_TREE.body if isinstance(n, ast.FunctionDef)
-          and n.name == "_hex64"], type_ignores=[])
+          and n.name in {"_hex64", "_program_binding_matches"}], type_ignores=[])
 gate_ctx = {}
 exec(compile(GATE_SUBSET, str(GATE_SOURCE), "exec"), gate_ctx)
 
@@ -236,6 +236,7 @@ class ContractInvariantTests(unittest.TestCase):
         self.assertIn("_sha(\"GOODHART_SOURCE_V1\"", code)
         self.assertIn("def accept_program", code)
         self.assertIn("only owner or beneficiary may assess", code)
+        self.assertIn("owner and beneficiary must differ", code)
 
     def test_no_llm_controls_reward_amount(self):
         code = SOURCE.read_text()
@@ -262,10 +263,23 @@ class RewardGateInvariantTests(unittest.TestCase):
     def test_consumer_is_primary_predicate_bound(self):
         code = GATE_SOURCE.read_text()
         self.assertIn("goodhart.view().is_rewardable", code)
+        self.assertIn("goodhart.view().get_program", code)
+        self.assertIn("_program_binding_matches", code)
         self.assertIn("gl.message.sender_address != self.beneficiary", code)
         self.assertIn("action substitution", code)
         self.assertIn("replay", code)
         self.assertNotIn("gl.nondet", code)
+
+    def test_consumer_rejects_cross_program_and_beneficiary_substitution(self):
+        match = gate_ctx["_program_binding_matches"]
+        program = {"id": "rewardable", "fingerprint": "a" * 64,
+                   "beneficiary": "0xbeneficiary"}
+        self.assertTrue(match(program, "rewardable", "a" * 64, "0xbeneficiary"))
+        self.assertFalse(match(program, "other-program", "a" * 64, "0xbeneficiary"))
+        self.assertFalse(match(program, "rewardable", "b" * 64, "0xbeneficiary"))
+        self.assertFalse(match(program, "rewardable", "a" * 64, "0xattacker"))
+        self.assertFalse(match({"id": "rewardable", "fingerprint": "a" * 64},
+                               "rewardable", "a" * 64, "0xbeneficiary"))
 
     def test_consumer_has_only_one_write_and_one_view(self):
         writes = [m.name for n in GATE_TREE.body if isinstance(n, ast.ClassDef)

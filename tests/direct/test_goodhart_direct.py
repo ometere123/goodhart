@@ -376,3 +376,17 @@ def test_cancel_before_acceptance_is_irreversible(direct_vm, direct_deploy,
     with direct_vm.prank(beneficiary_address()):
         with direct_vm.expect_revert("already terminal"):
             contract.accept_program("support42", fingerprint)
+
+
+def test_owner_cannot_register_self_as_beneficiary(direct_vm, direct_deploy,
+                                                    direct_owner):
+    direct_vm.warp(BASE)
+    contract = direct_deploy("contracts/goodhart.py", sdk_version="v0.2.12")
+    from genlayer.py.types import Address
+
+    with direct_vm.expect_revert("owner and beneficiary must differ"):
+        contract.register_program(
+            "self-beneficiary", Address(direct_owner), "Support outcomes",
+            OBJECTIVE, INDICATOR, "Tickets closed", "tickets", "UP", 20, 3000,
+            PROXY, OUT_A, OUT_B, 60, 7200,
+        )

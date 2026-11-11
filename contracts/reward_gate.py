@@ -13,7 +13,7 @@ from dataclasses import dataclass
 class IGoodhart:
     class View:
         def is_rewardable(self, program_id: str, fingerprint: str) -> bool: ...
-        def get_program(self, program_id: str) -> dict: ...
+        def get_program(self, program_id: str) -> dict[str, str]: ...
 
     class Write:
         pass
@@ -56,6 +56,11 @@ class RewardGate(gl.Contract):
         if action_hash in self.executions:
             raise gl.vm.UserError("EXPECTED: replay")
         goodhart = IGoodhart(self.registry)
+        program = goodhart.view().get_program(self.program_id)
+        if not _program_binding_matches(
+                program, self.program_id, self.fingerprint,
+                self.beneficiary.as_hex):
+            raise gl.vm.UserError("EXPECTED: programme beneficiary binding")
         if not goodhart.view().is_rewardable(self.program_id, self.fingerprint):
             raise gl.vm.UserError("EXPECTED: underlying objective not certified")
         self.executions[action_hash] = GateExecution(
@@ -69,3 +74,12 @@ class RewardGate(gl.Contract):
 def _hex64(value: str) -> bool:
     return (isinstance(value, str) and len(value) == 64
             and all(c in "0123456789abcdef" for c in value))
+
+
+def _program_binding_matches(program: dict[str, str], program_id: str,
+                             fingerprint: str, beneficiary: str) -> bool:
+    """Require the consumer binding to match the primary's frozen programme."""
+    return (isinstance(program, dict)
+            and program.get("id") == program_id
+            and program.get("fingerprint") == fingerprint
+            and program.get("beneficiary") == beneficiary)

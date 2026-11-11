@@ -20,6 +20,7 @@ NAMES = {
     "_classify", "_sha", "_escape", "_prompt", "_audit_prompt",
     "_acceptance_reason",
 }
+GATE_SOURCE = ROOT / "contracts" / "reward_gate.py"
 
 
 def load_context(source: str) -> dict:
@@ -65,6 +66,28 @@ def must_fail(label: str, mutant: str, assertion) -> None:
 def require(condition: bool) -> None:
     if not condition:
         raise AssertionError("regression did not hold")
+
+
+def load_gate_context(source: str) -> dict:
+    tree = ast.parse(source)
+    subset = ast.Module(
+        body=[node for node in tree.body
+              if isinstance(node, ast.FunctionDef)
+              and node.name == "_program_binding_matches"],
+        type_ignores=[],
+    )
+    context = {}
+    exec(compile(subset, str(GATE_SOURCE), "exec"), context)
+    return context
+
+
+def must_fail_gate(label: str, mutant: str, assertion) -> None:
+    try:
+        assertion(load_gate_context(mutant))
+    except AssertionError:
+        print(f"killed: {label}")
+        return
+    raise SystemExit(f"mutation escaped: {label}")
 
 
 original = SOURCE.read_text()
@@ -120,5 +143,18 @@ must_fail(
     ),
 )
 
-print("GOODHART: mutation checks PASS (5 weakened variants killed)")
+gate_original = GATE_SOURCE.read_text()
+must_fail_gate(
+    "reward gate primary beneficiary binding",
+    gate_original.replace(
+        'program.get("beneficiary") == beneficiary',
+        'program.get("beneficiary") == program_id', 1,
+    ),
+    lambda ctx: require(ctx["_program_binding_matches"](
+        {"id": "p", "fingerprint": "a" * 64, "beneficiary": "0xworker"},
+        "p", "a" * 64, "0xworker",
+    )),
+)
+
+print("GOODHART: mutation checks PASS (6 weakened variants killed)")
 
