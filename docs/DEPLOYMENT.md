@@ -1,173 +1,131 @@
 # GOODHART deployment and verification ledger
 
-This ledger separates finalized evidence for the corrected source from the
-earlier deployment. No historical receipt is promoted to proof of a changed
+This ledger separates current final-source facts, failed or fail-closed attempts,
+and historical receipts. No historical receipt is promoted to proof of a changed
 build.
 
 ## Locked target
 
-- Network: `studionet`
-- Chain ID: `61999` (`0xf22f`)
-- RPC: `https://studio.genlayer.com/api`
-- Repository-local CLI: `genlayer@0.39.1`
-- GenVM runner: `v0.2.12`
-- GenVM linter: `0.11.0`
-- Direct Mode: `genlayer-test==0.29.2`
+- Network: studionet
+- Chain ID: 61999 (0xf22f)
+- RPC: https://studio.genlayer.com/api
+- Repository-local CLI: genlayer@0.39.1
+- GenVM runner: v0.2.12
+- GenVM linter: 0.11.0
+- Direct Mode: genlayer-test==0.29.2
+- Global CLI 0.40.0rc2: not used
+- Chain 61997 and preview networks: not used
 
-`node scripts/assert_studionet.mjs` queried the locked RPC and confirmed
-`eth_chainId = 0xf22f`; the local CLI printed `0.39.1`. The global CLI was not
-used. No chain 61997 or preview network was used.
+The RPC guard queried the exact RPC and returned eth_chainId 0xf22f. The local
+binary returned 0.39.1.
 
 ## Baseline and local verification
 
-Baseline HEAD before hardening was `3f4285ff8916fb9456363939fb24b22a96060828`
-with a clean worktree. Baseline source hashes were Goodhart
-`d027cb8009a16197448efbfd2055c54c76c86d0586a51d11058d2f8d281e9a3a` and
-RewardGate `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22`.
+The pre-change baseline was 101e702106b523e2f98409583454a7ef00d90b3d. The
+beneficiary-consent implementation was committed as
+07abd66cf7c6b1170115d9fdcc83cadf3e25accc; fixture additions followed in
+fa5d0617a3689cbebacfdd47153b04b06e57f4b3 and
+7113208ce3ed0e1a1b1cc027d80f5db9585ef8f7.
 
-The corrected local verification was rerun after the code change:
+Latest executed results:
 
-- Offline/host: 32 passed.
-- Direct Mode: 16 passed, including native validator re-observation.
-- Combined pytest collection: 48 passed.
-- Preflight: 18 assertions passed.
-- Mutation checks: 4 weakened variants killed.
-- Python compileall: passed.
-- GenVM lint/schema: both contracts passed with `genvm-lint 0.11.0` and
-  `GENVM_VERSION=v0.2.12`.
-- Production npm audit: no high-severity production vulnerabilities.
-- RPC guard and local CLI check: passed.
+- unittest offline: 33 passed
+- Direct Mode: 25 passed
+- combined pytest: 58 passed
+- preflight: 20 assertions passed
+- mutation checks: 5 weakened variants killed
+- compileall: passed
+- GenVM lint/schema: both contracts passed with linter 0.11.0 and runner v0.2.12
+- production npm audit: no high-severity production vulnerability was reported
+- network guard: passed for studionet / 61999
 
-Direct Mode and controlled fixtures are simulated/test evidence, not publisher
-authentication or live-world truth.
-
-## Corrected primary deployment
-
-The `_fetch` correction changed contract bytes, so a new primary was deployed.
+## Current final primary
 
 | Field | Verified value |
 |---|---|
-| Goodhart address | `0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881` |
-| Deployment transaction | `0xa400c4def28d7e74820252f6f7be13b7b4467712928202336aad3363b87fe638` |
-| Finality/result | `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| Final local source SHA-256 | `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b` |
-| Read-back deployed SHA-256 | `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b` |
-| Read-back source bytes | 28,052 bytes; exact byte equality |
+| Goodhart | 0xc6f159b8A0475D32c39033131D5b4E496581f38a |
+| Deployment transaction | 0x7cb4e4544e03257b6fcbbce512977f288d9ec5af3b93acb2c8a4b33bb7b5cc58 |
+| Finality/result | finalized MAJORITY_AGREE, execution SUCCESS |
+| Source SHA-256 | 7d2dae0e1c8c5e3b7ecf26c79fc3534beb8909f2394ef157baeb814f3f138106 |
+| Source bytes | 30,156; exact byte equality through gen_getContractCode |
+| Owner signer | 0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7 |
+| Beneficiary signer | 0x271FeAA6764865c2c8309e4c603D10650DbD0F95 |
 
-The deployed source was read through `gen_getContractCode`, decoded and hashed
-locally. The final Git blob has the same bytes and hash.
+## Consent and fail-closed live proofs
 
-## Fresh corrected-primary live attempts
+### consent-live-20261111
 
-The owner was `0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7` and the distinct
-beneficiary was `0xaC3508205964f73AcFc1F2cb33Ad529dBed8Cda1`. The CLI used the
-typed address form `addr#` followed by the 40 hexadecimal characters; the
-first attempted `addr#0x...` form was rejected by the contract and was not
-counted as a successful registration.
+- Registration: 0xb3a659aa40da24cb99b1d6102dd5e9d18eb2f250e4c04ba34612f82f02829620; execution SUCCESS.
+- Fingerprint: 09cb4951795059ff70c91ea2467eb2c0faa41a92d50d2176acc0680122f0a2cf.
+- Unauthorized owner acceptance: 0x3dea3a13aa16982b8786020491f7158e8917d42d815af705717ac17a950847f3; finalized expected rollback only beneficiary may accept.
+- Beneficiary acceptance: 0x5aafe84d15b2d72125327371bd542b77ec0947b3ddc9294c4d124086ac604511; execution SUCCESS.
+- Beneficiary assessment: 0x339d9a253852b49287f4e7607d4e6bee17056a001a10f73051f41a1e8ab32731; finalized MAJORITY_AGREE, execution SUCCESS, returned INCONCLUSIVE; outcomes UNKNOWN / UNKNOWN and is_rewardable=false.
 
-### External XZ evidence candidate
+### consent-positive-20261111
 
-| Action | Finalized evidence |
-|---|---|
-| Registration | `0x05a914e1a7a07efe2d7997daab2c88c85c716414a53aa67da0bdba71d2f7f4b5`; execution `SUCCESS` |
-| Programme/fingerprint | `xz-security-remediation-20261110` / `92a217eaf7de6ad96a26a19c64e4ec442f755badd6c6d97b90e49cd19d694709` |
-| Assessment | `0x68dd7b602f83193be6ed03a388fa7beefb26cbb633c72fd111d191d4e781edae`; `FINALIZED`, `MAJORITY_AGREE`, execution `SUCCESS` |
-| Read-back | proxy `20 -> 80`; outcome A `UNKNOWN`; outcome B `UNKNOWN`; status `INCONCLUSIVE`; `is_rewardable=false` |
+- Registration: 0x338889a34bb003e53fe54fe04a106753658534573d6c1b6bdb3c1e405dd6b236.
+- Fingerprint: b2c652daec97457402317975817d459eab616e52dc77127d10d9b04255722e79.
+- Beneficiary acceptance: 0x66226835222c50f0e59914315e78d4f411465cb7238ed13960698caada4f5e62; execution SUCCESS.
+- Owner cancellation after acceptance: 0xc805ff4c3147415a1443a5793bd22013c68ff3e92a49b342a87a9dd34c23a66d; finalized expected rollback accepted program cannot be cancelled.
+- Duplicate acceptance: 0xa3954b037be034275aa8aa05aa7842d2987785fcbc3cd127f8b051236b93b08d; finalized expected rollback already accepted.
+- Beneficiary assessment: 0x4c2c619a8aea75c5407132bbbef923b44d8bff7d95098afea0e7a463afbdf0b8; execution SUCCESS, fail-closed INCONCLUSIVE.
 
-The external sources were CERT-EU and the Debian Security Tracker. Their URLs,
-raw hashes, normalized lengths and limitations are in
-[`EVIDENCE_MANIFEST.md`](EVIDENCE_MANIFEST.md). This result is the desired
-fail-closed behavior when public material does not establish a comparable
-positive outcome; it is not a reward proof.
+## Fresh positive attempts on the current primary
 
-### Controlled fixture attempts on the corrected primary
+The exact controlled outcome fixture pair was used only as mechanics evidence. It
+does not prove publisher independence or a real-world beneficiary outcome.
 
-All of the following used the same distinct beneficiary and repository-hosted
-or repository-derived bounded fixtures. They are mechanics tests, not
-independent publisher evidence.
+- fixture-rewardable-20261110: beneficiary acceptance
+  0xbe0e4c8d29d978a3dbdc6d06f88b6f447619bb3b4450120e3267525a42edff6a.
+  Assessment 0x08a77973f7c1fabe1e8a1ab2d2f429a7631393bb96507a61ec2a40fd8333d805
+  finalized MAJORITY_DISAGREE; validators disagreed with the full proposed
+  nondeterministic result and the programme remained PENDING. A later bounded
+  retry 0x7bc69ae7fe6d188787e806fe0fd17ce7d2dd3e431afd88d755fc5848339408bf
+  finalized consensus but rolled back outside assessment window.
+- final-primary-rewardable-20261111: registration
+  0xcde687a692d14e904f8be16a0f91acd0ca8b2fc9eba006b41609535aa7f79171 and
+  acceptance 0x82e8c3840e3e52d8c01e70018c503dd759576f1986ec9b20940a038f83addf7.
+  The assessment 0x7c817f88c2c30bc5872dc6b5ebcc7593fc1755b476a97da630adf215f976a67c
+  finalized successfully but returned INCONCLUSIVE because the proxy URL
+  pointed at an uncommitted fixture revision; proxy_after was 0.
+- final-primary-rewardable-20261111b: registration
+  0xe5cb65b17c4f031087794faa905386b1901e2b27f23dddbd61fac9376b4d56a5.
+  The acceptance transaction 0xd77f426c33b10cd5c67ebc33cd8465f871924dc16ca54d3cb667f3975bd4b1ae
+  did not record acceptance before its window; get_program read accepted=0.
+  Assessment 0x6c5a6e976fdf5553ee18e06e04b52738754f6148c27db2fb06bc1a370af326e3
+  finalized with an expected stale-program rollback.
 
-| Programme | Registration | Assessment | Final read-back |
-|---|---|---|---|
-| `fixture-rewardable-final-20261110` | `0x8543b7b2d5df8808e7817ed5b0796fcd046cf874d87c2057bd9a352f131ab6a0` | `0x9cec76401776524b3bc6a8c8b951e59b7b6bd2768427834f19ac665dc73a3002` | `INCONCLUSIVE`, proxy `20 -> 80`, A/B `UNKNOWN` |
-| `fixture-positive-20261110` | `0xf5fb7494451fbfb2e34fa47f590ccce2e3e74f01cbeb1b262c412facff18a8e4` | `0x23551006dd9c9cc227cfd43f0a5cafb575d16c42b5a46175ade64ced0622b32e` | `INCONCLUSIVE`, proxy `20 -> 80`, A/B `UNKNOWN` |
-| `fixture-consensus-positive-20261110` | `0x637a97e7c9a92dc2ab347294849039691fceb6d901db531675d54ed9e1eccc55` | `0x3784eba481d4ab244cce1a7b81b3fb48a75b2f8c9124cfb4faf35dfa9f353dd9` | First assessment submission was not returned by the RPC; the later finalized call rolled back `EXPECTED: stale program or already terminal`; no receipt and no reward clearance |
-| `reward-permission-positive-20261110` | `0x5ca7be79e50a7f4448788cb0f0b41a1ec88a9bb46783b667c2c3cdfeeab52772` | `0x20f94ec1580007b41f2c291982f26fc5ba769dfbdebda7efeb73531334a3eea8` | Finalized rollback `EXPECTED: stale program or already terminal`; programme remained `PENDING`; no reward clearance |
-
-The rows above are earlier unsuccessful fixture attempts and remain recorded
-as such. The later beneficiary-bound fixture and its finalized consumer proof
-are documented in the next section.
-
-## Fresh corrected-primary positive and consumer proof
-
-The following is a controlled, repository-hosted fixture. It proves the
-corrected primary’s finalized positive state transition and exact RewardGate
-composition; it is not independent publisher authentication or proof of a
-real beneficiary’s production outcome.
-
-| Field | Verified value |
-|---|---|
-| Programme | `fresh-positive-auth-beneficiary-20261110` |
-| Owner | `0x0d5540e0aD4B92Aa0ad4e5F1b8cD645ee1E363E7` |
-| Distinct beneficiary | `0x271FeAA6764865c2c8309e4C603D10650DbD0F95` |
-| Fingerprint | `8f05a66e99962bdbfaf58820efeb873e78831e1aca7f61080fc72b9c89198494` |
-| Registration | `0xbd19a20312a6db27f752bfac285ccc0cacab08bba339771083a9280a7b4abd2f`; finalized execution `SUCCESS` |
-| Assessment | `0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2`; finalized `MAJORITY_AGREE`, execution `SUCCESS` |
-| Read-back | status `REWARDABLE`; proxy `20 -> 80`; outcomes `IMPROVED` / `IMPROVED`; `is_rewardable=true` |
-| Proxy digest | `ea4e7e433d09b85fde3847ee67e88bb8ab8968ce29ebea3ee670d3950f175129` |
-| Outcome A digest | `a0bbbf349468f0ed67f57ccd46444a8a9bb555b76a114fd6a13ec22f2a0b65ba` |
-| Outcome B digest | `ce52190f24d7454d7bc4bf1856edc895f9296fc53d78e76c4325a632b8f8fbb2` |
-| RewardGate | `0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0` |
-| RewardGate deployment | `0x58f6f86c3e2ba43d66351d006edee34463e39a4eec50f609130680b8f04f3200`; finalized `MAJORITY_AGREE`, execution `SUCCESS` |
-| Exact action hash | `31b6c9e6ef42b61aa61a07b5dea943761847a6049d18ad7c1f96fa51e5eb5e70` |
-| Authorized action | `0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423`; finalized `MAJORITY_AGREE`, execution `SUCCESS`; `was_executed=true` |
-| Replay | `0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8`; finalized `MAJORITY_AGREE`, rollback `EXPECTED: replay`; `was_executed` remained `true` |
-
-The first assessment attempt for this same frozen programme finalized
-`MAJORITY_DISAGREE` as `0xf8a974ded8f6224565ae2e144234a48c7a71627ae2f310d0d80512bb7057b020`.
-It left the programme `PENDING` with no receipt. The single bounded retry
-above then succeeded; the disagreement was not reinterpreted as clearance.
-
-The corrected primary remains byte-identical to the deployed source, and the
-new RewardGate source was independently read through `gen_getContractCode`.
+No current-primary REWARDABLE receipt was obtained. No RewardGate was deployed
+against the current primary.
 
 ## Historical proof, retained but not promoted
 
-The previous byte-identical deployment was Goodhart
-`0x7F1eE6dA4ED706E363B54713B6dfc0dB2AA64234`, source hash
-`d027cb8009a16197448efbfd2055c54c76c86d0586a51d11058d2f8d281e9a3a`.
-Its controlled positive cycle and proof-bound RewardGate remain useful
-historical evidence:
+The prior corrected primary was
+0x9aAB4148ff9C939Be58C64dD5bfa0FCFecBDA881 with source SHA-256
+e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b. Its
+controlled positive assessment
+0xf20659666a3b89cee1e6bd0076d150e8ab2b4c5c16765f87863630c079c32fb2 returned
+REWARDABLE. The bound historical RewardGate was
+0x83C553f6Ccd9d3Ea5f474f69F275b781F22F52F0; its successful action was
+0x8c838c497d329247147c52db4c317ccd5e0b262853c5aa5c0bcb48b3dce7c423 and its
+replay rollback was
+0xb81743cea6d116f0472a036d3136bc364ae7ebfc0c5c512f50ed3f5db3c534d8.
 
-- Goodhart deployment: `0x9453ddcc3f8bfa96e84f26227b5c8ffbc59478166d20e1f0ec022fc7997847d8`.
-- Positive assessment: `0x51297a28d9f9cf30b7a4f519c72f2203d2befc7fa2d49bd60c2de508a1e37481`,
-  finalized `MAJORITY_AGREE`, execution `SUCCESS`, read-back `REWARDABLE`.
-- Historical proof-bound RewardGate: `0xa718F7aff4a7fB57E3070100c27b90830b60A3Ae`,
-  deployment `0xc4595146d2d667e2b52603cd6f2eac4c1f8638fa76d3e1559e2d4ee053b36f9c`.
-- Historical authorized action: `0x926f8248e746667aaccbc0ea899b3a1c6318f51ecffdec66b71485b444a415f9`.
-- Historical replay rollback: `0xce7a86670ddf252cd317273d401058b8c7a32840de0c66a163e4dc991b18aea1`.
+Those receipts prove the previous primary only and are not new-primary proof.
 
-These receipts prove the previous deployment only. They are not proof of the
-corrected primary source.
+## Source integrity and release status
 
-## Source integrity and scope
+- Current Goodhart local SHA-256:
+  7d2dae0e1c8c5e3b7ecf26c79fc3534beb8909f2394ef157baeb814f3f138106.
+- Current RewardGate local SHA-256:
+  29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22.
+- Current Goodhart deployed bytes match the final local contract bytes exactly.
+- The RewardGate hash was verified against the historical gate deployment, not a
+  current-primary deployment.
+- No explorer URL is claimed because the configured explorer endpoint returned
+  HTTP 503 during prior closeout.
+- No secrets, frontend, backend, database, Docker or wallet UI are committed.
 
-- Corrected `contracts/goodhart.py`: SHA-256
-  `e516fb4a497bb2b8bad20cca5b141b3b033fc625a609201119c660d375d4d10b`.
-- `contracts/reward_gate.py`: SHA-256
-  `29e1254de00c6f61963ea65c63929ceaf0663c790c9feae1ec2133c634a7bd22`.
-- Goodhart deployed bytes match the final committed Goodhart file exactly.
-- RewardGate source is unchanged and the new deployed gate bytes match it.
-  The new gate is bound to the corrected primary and the fresh programme
-  listed above.
-- No explorer URL is claimed; the explorer endpoint returned HTTP 503.
-- No secrets, private keys, frontend, backend, database, Docker or wallet UI
-  are part of the repository.
-
-## Release status
-
-The previously identified corrected-primary release blocker is cleared:
-fresh finalized `REWARDABLE`, exact RewardGate binding, authorized execution
-and finalized replay rejection are all recorded above. The positive case is a
-controlled mechanics fixture. The external XZ candidate remains a finalized
-fail-closed `INCONCLUSIVE` result, so this release does not claim authenticated
-publisher independence, causal real-world improvement or payment.
+Release readiness: NOT READY. The exact remaining blocker is a fresh finalized
+REWARDABLE assessment on the current final primary followed by a newly bound
+RewardGate deployment, authorized execution and replay verification.
